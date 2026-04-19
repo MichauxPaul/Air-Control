@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_LocalPosition: {x: 6.53, y: -1.488, z: 0}
-  m_LocalScale: {x: 0.014949129, y: 0.014949129, z: 0.014949129}
+  m_LocalScale: {x: 0.03564321, y: 0.03564321, z: 0.03564321}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -553,6 +553,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 298e42e53155e6441b52c3da916c4e39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  pointB: {fileID: 0}
-  initialSpeed: 5
-  slowRadius: 20
+  runwayPoint: {fileID: 0}
+  initialSpeed: 2
+  slowRadius: 8.2
+  assignedGate: {fileID: 0}
+  startColor: {r: 1, g: 0, b: 0, a: 1}
+  state: 0
