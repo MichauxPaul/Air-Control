@@ -556,6 +556,7 @@ MonoBehaviour:
   runwayPoint: {fileID: 0}
   initialSpeed: 2
   slowRadius: 8.2
+  taxiSpeed: 0.15
   assignedGate: {fileID: 0}
   startColor: {r: 1, g: 0, b: 0, a: 1}
   state: 0
