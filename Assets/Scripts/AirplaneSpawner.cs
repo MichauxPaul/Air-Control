@@ -3,13 +3,13 @@ using UnityEngine;
 public class AirplaneSpawner : MonoBehaviour 
 {
     // prefab de l'avion à instancier
-    public GameObject planePrefab;
+    [SerializeField] private GameObject planePrefab;
     // point de spawn (position de départ)
-    public Transform pointA;
+    [SerializeField] private Transform pointA;
     // point de destination de base
-    public Transform runwayPoint;
+    [SerializeField] private Transform runwayPoint;
     // délai entre chaque spawn
-    public float spawnDelay = 10f; 
+    [SerializeField] private float spawnDelay = 10f; 
 
     void Start()
     {
