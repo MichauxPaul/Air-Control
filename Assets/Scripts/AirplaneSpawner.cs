@@ -1,31 +1,51 @@
-using UnityEngine; 
+using UnityEngine;
+using System.Collections;
 
-public class AirplaneSpawner : MonoBehaviour 
+public class AirplaneSpawner : MonoBehaviour
 {
-    // prefab de l'avion à instancier
     [SerializeField] private GameObject planePrefab;
-    // point de spawn (position de départ)
     [SerializeField] private Transform pointA;
-    // point de destination de base
     [SerializeField] private Transform runwayPoint;
-    // délai entre chaque spawn
-    [SerializeField] private float spawnDelay = 10f; 
+
+    [Header("Paramètres de Spawn")]
+    [SerializeField] private float startDelay = 40f;      // Délai au début
+    [SerializeField] private float endDelay = 5f;        // Délai après 5 mins
+    [SerializeField] private float timeToReachMaxIntensity = 300f; // 5 minutes en secondes
+
+    private float timer;
 
     void Start()
     {
-        // appelle la fonction SpawnPlane toutes les spawnDelay secondes
-        InvokeRepeating(nameof(SpawnPlane), 0f, spawnDelay);
+        // On lance la routine de spawn
+        StartCoroutine(SpawnRoutine());
+    }
+
+    IEnumerator SpawnRoutine()
+    {
+        while (true)
+        {
+            SpawnPlane();
+
+            // Calcul du ratio de progression (entre 0 et 1)
+            // Time.timeSinceLevelLoad donne le temps écoulé depuis le début de la scène
+            float progress = Mathf.Clamp01(Time.timeSinceLevelLoad / timeToReachMaxIntensity);
+
+            // Interpolation linéaire entre le délai de départ et le délai de fin
+            float currentDelay = Mathf.Lerp(startDelay, endDelay, progress);
+
+            // On attend le délai calculé avant le prochain spawn
+            yield return new WaitForSeconds(currentDelay);
+        }
     }
 
     void SpawnPlane()
     {
-        // instancie un nouvel avion à la position de pointA sans rotation
         GameObject plane = Instantiate(planePrefab, pointA.position, Quaternion.identity);
-
-        // récupère le script Airplane attaché au prefab
         Airplane airplane = plane.GetComponent<Airplane>();
 
-        // assigne le point de piste à l'avion
-        airplane.runwayPoint = runwayPoint;
+        if (airplane != null)
+        {
+            airplane.runwayPoint = runwayPoint;
+        }
     }
 }
