@@ -4,100 +4,117 @@ using UnityEngine.InputSystem;
 public class CamFollowMouse : MonoBehaviour
 {
     [Header("Drag")]
-    //Vitesse Ã  laquelle la camÃ©ra bouge
-    public float dragSpeed = 1f;
+    // Vitesse a laquelle la caméra se déplace pendant le drag.
+    public float DragSpeed = 1f;
 
     [Header("Zoom")]
-    //RÃ©glages du zoom
-    public float zoomSpeed = 10f;
-    public float minZoom = 5f;
-    public float maxZoom = 20f;
+    // Vitesse de zoom avec la molette.
+    public float ZoomSpeed = 10f;
+    // Zoom minimum autorisé.
+    public float MinZoom = 5f;
+    // Zoom maximum autorisé.
+    public float MaxZoom = 20f;
 
     [Header("Limits")]
-    //Limites du dÃ©placement de la camÃ©ra
-    public Vector2 limitX = new Vector2(-50, 50);
-    public Vector2 limitY = new Vector2(-50, 50);
+    // Limites horizontales de la caméra.
+    public Vector2 LimitX = new Vector2(-50, 50);
+    // Limites verticales de la caméra.
+    public Vector2 LimitY = new Vector2(-50, 50);
 
-    private Vector3 dragOrigin;
-    private bool isDragging;
+    // Position du clic au début du drag.
+    private Vector3 _dragOrigin;
+    // On indique si le joueur est en train de déplacer la caméra.
+    private bool _isDragging;
 
-    private Camera cam;
+    // Référence vers la caméra principale.
+    private Camera _cam;
 
-    void Start()
+    private void Start()
     {
-        //On rÃ©cupÃ¨re la camÃ©ra principale
-        cam = Camera.main;
+        // On cherche la caméra marquée avec le tag MainCamera.
+        _cam = Camera.main;
     }
 
-    void Update()
+    private void Update()
     {
-        //On gÃ¨re le dÃ©placement
-        HandleDrag();
-        //On gÃ¨re le zoom
-        HandleZoom();
-        //On bloque la camÃ©ra dans les limites
+        // On gère le déplacement avec le clic droit.
+        UpdateDrag();
+        // On gère le zoom avec la molette.
+        UpdateZoom();
+        // On garde la caméra dans les limites.
         ClampPosition();
     }
 
-    //fonction appeller quand on appuie sur le clic droit
-    void HandleDrag()
+    // Fonction qui gère le deplacement de la caméra.
+    private void UpdateDrag()
     {
-        //On mÃ©morise oÃ¹ on a cliquÃ© dans le monde
+        // Si le clic droit vient d'etre appuyé, on mémorise la position de départ.
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
-            dragOrigin = cam.ScreenToWorldPoint(GetMouseWorldPosition());
-            isDragging = true;
+            // On convertit une position écran en position monde avec ScreenToWorldPoint.
+            _dragOrigin = _cam.ScreenToWorldPoint(GetMouseWorldPosition());
+            // On indique que le drag est actif.
+            _isDragging = true;
         }
-        //Quand on relÃ¢che
+
+        // Si le clic droit vient d'être relaché, on arrête le drag.
         if (Mouse.current.rightButton.wasReleasedThisFrame)
         {
-            isDragging = false;
+            // Le joueur ne déplace plus la caméra.
+            _isDragging = false;
         }
 
-        //pendant que l'on dÃ©place la camÃ©ra
-        if (isDragging)
+        // Si le joueur est en train de drag, on déplace la caméra.
+        if (_isDragging)
         {
-            //On regarde oÃ¹ est la souris
-            Vector3 currentPos = cam.ScreenToWorldPoint(GetMouseWorldPosition());
-            //On compare avec le point de dÃ©part
-            Vector3 difference = dragOrigin - currentPos;
-            //On dÃ©place la camÃ©ra de la diffÃ©rence
-            transform.position += difference * dragSpeed;
+            // Position actuelle de la souris dans le monde.
+            Vector3 currentPos = _cam.ScreenToWorldPoint(GetMouseWorldPosition());
+            // Différence entre le point de depart et la position actuelle.
+            Vector3 difference = _dragOrigin - currentPos;
+            // On applique cette différence à la position de la caméra.
+            transform.position += difference * DragSpeed;
         }
     }
 
-    //fonction appeller lors du zoom
-    void HandleZoom()
+    // Fonction qui gère le zoom de la caméra.
+    private void UpdateZoom()
     {
-        //On lit la molette
+        // On lit la valeur de la molette.
         float scroll = Mouse.current.scroll.ReadValue().y;
 
-        
+        // Si la molette a bougé, on change le zoom.
         if (scroll != 0)
         {
-            //On change le zoom
-            cam.orthographicSize -= scroll * zoomSpeed * Time.deltaTime;
-            //On empÃªche de trop zoomer et de trop dÃ©zoomer
-            cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, minZoom, maxZoom);
+            // On zoome avec orthographicSize.
+            _cam.orthographicSize -= scroll * ZoomSpeed * Time.deltaTime;
+            // On empêche de dépasser les valeurs min et max avec Clamp .
+            _cam.orthographicSize = Mathf.Clamp(_cam.orthographicSize, MinZoom, MaxZoom);
         }
     }
 
-    //conversion entre la position Ã©crant et la position dans le monde
-    Vector3 GetMouseWorldPosition()
+    // Fonction qui convertit la position de la souris pour pouvoir l'utiliser dans le monde.
+    private Vector3 GetMouseWorldPosition()
     {
+        // Position de la souris sur l'écran.
         Vector3 mousePos = Mouse.current.position.ReadValue();
-        mousePos.z = Mathf.Abs(cam.transform.position.z); 
+        // z correspond a la distance entre la camera et le plan du jeu.
+        mousePos.z = Mathf.Abs(_cam.transform.position.z);
+        // On retourne une position écran complète pour ScreenToWorldPoint.
         return mousePos;
     }
 
-    //Limites de la camÃ©ra
-    void ClampPosition()
+    // Fonction qui bloque la caméra dans les limites configurées.
+    private void ClampPosition()
     {
+        // On récupère la position actuelle.
         Vector3 pos = transform.position;
 
-        pos.x = Mathf.Clamp(pos.x, limitX.x, limitX.y);
-        pos.y = Mathf.Clamp(pos.y, limitY.x, limitY.y);
+        // On bloque x entre LimitX.x et LimitX.y avec Clamp.
+        pos.x = Mathf.Clamp(pos.x, LimitX.x, LimitX.y);
+        // On bloque y entre LimitY.x et LimitY.y avec Clamp .
+        pos.y = Mathf.Clamp(pos.y, LimitY.x, LimitY.y);
 
+        // On applique la position corrigée.
         transform.position = pos;
     }
 }

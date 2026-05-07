@@ -5,365 +5,823 @@ using UnityEngine.InputSystem;
 public class Airplane : MonoBehaviour
 {
     [Header("Points")]
-    public Transform runwayPoint;
+    // Point que l'avion vise pendant l'approche.
+    public Transform RunwayPoint;
+    // Point de sortie utilise quand le joueur refuse l'atterrissage.
     private static Transform _goAroundPoint;
 
-    [Header("Movement")]
-    public float initialSpeed = 5f;
-    public float slowRadius = 5f;
+    [Header("Vitesse d'approche")]
+    // Vitesse pendant l'arrivÈe.
+    public float InitialSpeed = 5f;
+    // Distance ‡ partir de laquelle l'avion ralentit avant la fin de la piste.
+    public float SlowRadius = 5f;
 
-    [Header("Taxi")]
-    public float taxiSpeed = 1f;
+    [Header("Vitesse durant le Taxi")]
+    public float TaxiSpeed = 1f;
 
-    [Header("Pushback")]
-    public float pushbackSpeed = 1f;
+    [Header("Vitesse durant le Pushback")]
+    public float PushbackSpeed = 1f;
+
+    [Header("Takeoff")]
+    public float MaxTakeoffSpeed = 8f;
+    // AccÈlÈration appliquÈe jusqu'‡ la vitesse maximale.
+    public float TakeoffAcceleration = 1f;
 
     [Header("Gate")]
-    public Transform assignedGate;
+    public Transform AssignedGate;
 
     [Header("Visual")]
-    public Color startColor = Color.white;
+    public Color StartColor = Color.white;
 
-    // üîä AUDIO
     [Header("Audio")]
-    public AudioClip clickSound;
+    // Son jouÈ quand on clique sur l'avion.
+    public AudioClip ClickSound;
+    // AudioSource qui joue le son.
     private AudioSource _audioSource;
 
+    // EnumËre tous les Ètats possibles de l'avion.
     public enum AirplaneState
     {
         Approach,
         SlowingApproach,
         Cleared,
-        Touchdown,
         WaitingAtRunway,
-
         GoAround,
-
         GoingToGate,
-        AtGateWaitingPushback,
-
+        AtGate,
         PushbackRequest,
         Pushback,
-
+        TaxiRequest,
+        TaxiingToRunway,
+        TakeoffRequest,
+        TakingOff,
+        TakeoffComplete,
         Parked,
         Stopped
     }
 
-    public AirplaneState state = AirplaneState.Approach;
+    // Etat de base de l'avion.
+    public AirplaneState State = AirplaneState.Approach;
 
+    // Ici SpriteRenderer va nous servir a changer la couleur de l'avion.
     private SpriteRenderer _spriteRenderer;
+    // RÈfÈrence vers l'UI
     private AirplaneUI _uiManager;
+    // RÈfÈrence vers le gestionnaire des chemins.
     private TaxiwayManager _taxiwayManager;
 
+    // Chemin utilisÈ pour rouler au sol.
     private List<Transform> _taxiPath = new List<Transform>();
+    // Index du prochain point dans le chemin de taxi.
     private int _taxiIndex = 0;
 
+    // Chemin utilise pendant le pushback.
     private List<Transform> _pushbackPath = new List<Transform>();
+    // Index du prochain point de pushback.
     private int _pushbackIndex = 0;
+    // Point de sortie du pushback, on l'utilise pour trouver le bon chemin vers la piste.
+    private Transform _pushbackExitPoint;
 
+    // Index du prochain point dans le chemin de dÈcollage.
+    private int _takeoffIndex = 0;
+    // Vitesse courante pendant le decollage; elle augmente progressivement.
+    private float _currentTakeoffSpeed;
+    // On rÈcupËre le chemin du dÈcollage fourni par TaxiwayManager.
+    private List<Transform> _takeoffPath = new List<Transform>();
+
+    // Timer utilise quand l'avion attend a la gate.
     private float _gateTimer;
+    // DÈlai alÈatoire avant que l'avion demande le pushback.
     private float _gateDelay;
 
-    void Start()
-    {
-        _spriteRenderer = GetComponent<SpriteRenderer>();
-        _audioSource = GetComponent<AudioSource>(); // üîä
+    // On mÈmorise l'Ètat avant un stop pour savoir ou reprendre.
+    private AirplaneState _stateBeforeStop;
+    // On Èvite de donner plusieurs fois les points d'arrivÈe a la gate.
+    private bool _gateArrivalScored;
+    // On Èvite de donner plusieurs fois les points de dÈcollage.
+    private bool _takeoffScored;
 
+    // PropriÈtÈ publique pour savoir si l'avion est actuellement arrÍtÈ.
+    public bool IsStopped() 
+    {
+        return State == AirplaneState.Stopped;
+    }
+     
+
+    private void Start()
+    {
+        // On rÈcupËre le SpriteRenderer de l'avion.
+        _spriteRenderer = GetComponent<SpriteRenderer>();
+        // On rÈcupËre l'AudioSource de l'avion.
+        _audioSource = GetComponent<AudioSource>();
+
+        // Si l'avion a un sprite, on lui applique la couleur rouge de dÈpart.
         if (_spriteRenderer != null)
         {
-            startColor = Color.white;
             _spriteRenderer.color = Color.red;
         }
 
+        // Cherche l'UI des avions
         _uiManager = FindFirstObjectByType<AirplaneUI>(FindObjectsInactive.Include);
+        // Cherche le gestionnaire des chemins dans la scËne.
         _taxiwayManager = FindFirstObjectByType<TaxiwayManager>();
 
-        if (runwayPoint == null)
-            runwayPoint = GameObject.Find("RunwayPoint")?.transform;
+        // Si RunwayPoint n'est pas assignÈ, on essaie de le trouver par son nom.
+        if (RunwayPoint == null)
+            RunwayPoint = GameObject.Find("RunwayPoint").transform;
 
+        // Si le point de go around n'est pas assignÈ on essaie de le trouver par son nom
         if (_goAroundPoint == null)
         {
-            GameObject obj = GameObject.Find("GoAroundPoint");
-            if (obj != null)
-                _goAroundPoint = obj.transform;
+            _goAroundPoint = GameObject.Find("GoAroundPoint").transform;
         }
     }
 
-    void Update()
+
+    private void Update()
     {
-        HandleStateTransitions();
-        HandleGateTimer();
+        // GËre les transitions d'Ètat automatiquement.
+        UpdateStateTransitions();
+        // GËre l'attente a la gate.
+        UpdateGateTimer();
+        // Met ‡ jour la couleur selon l'Ètat.
         UpdateColor();
 
+        // On rÈcupËre la cible actuelle de l'avion.
         Transform target = GetTarget();
+        // Si aucune cible n'existe, on ne peut pas bouger.
         if (target == null) return;
 
+        // Direction entre l'avion et sa cible.
         Vector3 dir = target.position - transform.position;
 
+        // Si la direction est assez grande, on oriente l'avion vers sa cible.
         if (dir.sqrMagnitude > 0.001f)
         {
+            // Atan2 calcule l'angle en radiant entre l'avion et sa cible. On la convertie ensuite en degrËs
             float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            // On applique une rotation pour bien orienter le sprite.
             transform.rotation = Quaternion.Euler(0, 0, angle - 90f);
         }
 
+        // Distance entre l'avion et sa cible.
         float distance = Vector3.Distance(transform.position, target.position);
 
-        if (state == AirplaneState.Pushback)
+        // Logique de mouvement du pushback.
+        if (State == AirplaneState.Pushback)
         {
-            HandlePushback();
+            // GËre le recul de l'avion.
+            MovePushback();
+            // On quitte la fonction pour Èviter que le mouvement normal s'ajoute au pushback.
             return;
         }
 
+        // Le decollage a aussi sa propre logique car il accelËre progressivement.
+        if (State == AirplaneState.TakingOff)
+        {
+            // GËre l'accÈlÈration et le chemin de dÈcollage.
+            MoveTakeoff();
+            // On quitte pour ne pas utiliser le mouvement normal.
+            return;
+        }
+
+        // On calcule la vitesse selon l'Ètat et la distance.
         float speed = GetSpeed(distance);
 
+        // Si l'Ètat permet le mouvement, on avance vers la cible.
         if (CanMove())
         {
-            transform.position = Vector3.MoveTowards(
-                transform.position,
-                target.position,
-                speed * Time.deltaTime
-            );
+            // La fonction MoveTowards deplace l'avion sans dÈpasser la cible.
+            transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
         }
 
-        HandleTaxi(distance);
-        HandleRunwayArrival(distance);
-        HandleClick();
+        // GËre le passage d'un point de taxi au suivant.
+        UpdateTaxiPath(distance);
+        // GËre l'arrivÈe sur la piste ou au go around.
+        CheckRunwayArrival(distance);
+        // GËre le clic sur l'avion.
+        CheckClickSelection();
     }
 
-    void HandleStateTransitions()
+    // GËre les transitions entre les Ètats.
+    private void UpdateStateTransitions()
     {
-        if ((state == AirplaneState.Approach || state == AirplaneState.Cleared)
-            && IsSlowingDown())
+        // Si l'avion est en approche et entre dans le rayon de ralentissement.
+        if ((State == AirplaneState.Approach || State == AirplaneState.Cleared) && IsSlowingDown())
         {
-            state = AirplaneState.SlowingApproach;
+            // Il passe en ralentissement.
+            State = AirplaneState.SlowingApproach;
         }
     }
 
-    float GetSpeed(float distance)
+    // Retourne la vitesse adaptÈe a l'Ètat actuel.
+    private float GetSpeed(float distance)
     {
-        if (state == AirplaneState.Approach ||
-            state == AirplaneState.SlowingApproach)
+        // Pendant l'approche, on ralentit progressivement prËs de la fin de piste.
+        if (State == AirplaneState.Approach || State == AirplaneState.SlowingApproach)
         {
-            float t = Mathf.Clamp01(distance / slowRadius);
-            return initialSpeed * t;
+            // on garde une valeur entre 0 et 1.
+            float t = Mathf.Clamp01(distance / SlowRadius);
+            // Plus l'avion est proche, plus la vitesse baisse.
+            return InitialSpeed * t;
         }
 
-        if (state == AirplaneState.GoingToGate)
-            return taxiSpeed;
-
-        if (state == AirplaneState.Pushback)
-            return pushbackSpeed;
-
-        return initialSpeed;
-    }
-
-    bool CanMove()
-    {
-        return state != AirplaneState.WaitingAtRunway &&
-               state != AirplaneState.Parked &&
-               state != AirplaneState.Stopped &&
-               state != AirplaneState.AtGateWaitingPushback;
-    }
-
-    void HandleRunwayArrival(float distance)
-    {
-        if ((state == AirplaneState.Approach ||
-             state == AirplaneState.SlowingApproach ||
-             state == AirplaneState.Cleared)
-            && distance < 0.1f)
+        // Le roulage vers une gate ou vers la piste utilise TaxiSpeed.
+        if (State == AirplaneState.GoingToGate || State == AirplaneState.TaxiingToRunway)
         {
-            state = AirplaneState.WaitingAtRunway;
+            return TaxiSpeed;
+        }
+            
+
+        // Le pushback utilise sa propre vitesse.
+        if (State == AirplaneState.Pushback)
+        {
+            return PushbackSpeed;
+        }
+            
+
+        // Sinon on utilise la vitesse normale.
+        return InitialSpeed;
+    }
+
+    // On dit si l'avion a le droit de bouger avec le mouvement standard.
+    private bool CanMove()
+    {
+        // On interdit le mouvement dans les Ètats d'attente ou d'arrÍt.
+        return State != AirplaneState.WaitingAtRunway && State != AirplaneState.Parked && State != AirplaneState.Stopped && State != AirplaneState.AtGate;
+    }
+
+    // GËre l'arrivÈe a la piste et le go around.
+    private void CheckRunwayArrival(float distance)
+    {
+        // Si l'avion arrive au RunwayPoint pendant l'approche.
+        if ((State == AirplaneState.Approach || State == AirplaneState.SlowingApproach || State == AirplaneState.Cleared) && distance < 0.1f)
+        {
+            // Il attend une affectation de gate.
+            State = AirplaneState.WaitingAtRunway;
+        }
+
+        // Si l'avion atteint son point de go around.
+        if (State == AirplaneState.GoAround && distance < 0.2f)
+        {
+            // On le detruit 
+            Destroy(gameObject);
         }
     }
 
-    void HandleTaxi(float distance)
+    // GËre le roulage sur les chemins au sol.
+    private void UpdateTaxiPath(float distance)
     {
-        if (state != AirplaneState.GoingToGate) return;
-        if (_taxiPath.Count == 0) return;
+        // On traite seulement les deux Ètats de roulage.
+        if (State != AirplaneState.GoingToGate && State != AirplaneState.TaxiingToRunway) 
+        {
+            return;
+        }
 
+        // S'il n'y a aucun chemin, on ne fait rien.
+        if (_taxiPath.Count == 0) 
+        {
+            return;
+        } 
+
+        // Si l'avion est assez proche du point courant.
         if (distance < 0.2f)
         {
+            // On passe au point suivant.
             _taxiIndex++;
 
+            // Si on a depassÈ le dernier point du chemin.
             if (_taxiIndex >= _taxiPath.Count)
             {
+                // On vide le chemin courant.
                 _taxiPath.Clear();
-                StartGateWait();
+
+                // Si l'avion allait a une gate, il commence son attente a la porte.
+                if (State == AirplaneState.GoingToGate)
+                {
+                    StartGateWait();
+                }
+
+                // Si l'avion allait ‡ la piste, il demande maintenant le decollage.
+                else if (State == AirplaneState.TaxiingToRunway) 
+                {
+                    State = AirplaneState.TakeoffRequest;
+                }
+                    
             }
         }
     }
 
-    void StartGateWait()
+    // Fonction pour lancer l'attente a la gate.
+    private void StartGateWait()
     {
-        state = AirplaneState.AtGateWaitingPushback;
+        // L'avion est maintenant a la porte.
+        State = AirplaneState.AtGate;
+        // Remet le timer a zero.
         _gateTimer = 0f;
+        // DÈlai alÈatoire avant la demande de pushback (entre 30 seconde et 1 minute).
         _gateDelay = Random.Range(30f, 60f);
+
+        // Si les points de score de gate n'ont pas encore ÈtÈ donnÈs.
+        if (!_gateArrivalScored)
+        {
+            // On ajoute les points dans le GameManager.
+            GameManager.Instance.AddGateArrivalPoints();
+            // On mÈmorise que les points ont ÈtÈ donnÈs.
+            _gateArrivalScored = true;
+        }
     }
 
-    void HandleGateTimer()
+    // G*Ëre le timer d'attente a la gate.
+    private void UpdateGateTimer()
     {
-        if (state != AirplaneState.AtGateWaitingPushback) return;
+        // Si l'avion n'attend pas a la gate, on quitte.
+        if (State != AirplaneState.AtGate) 
+        {
+            return;
+        } 
 
+        // On ajoute le temps Ècoule depuis la derniËre frame.
         _gateTimer += Time.deltaTime;
 
-        if (_gateTimer >= _gateDelay)
-            state = AirplaneState.PushbackRequest;
+        // Quand le timer atteint le delai.
+        if (_gateTimer >= _gateDelay) 
+        {
+            // L'avion demande le pushback.
+            State = AirplaneState.PushbackRequest;
+        }
+            
     }
 
+    // On dÈfinit le chemin de pushback.
     public void SetPushbackPath(List<Transform> path)
     {
-        _pushbackPath = path != null ? new List<Transform>(path) : new List<Transform>();
+        // Si path existe, on l'utilise; sinon on crÈÈ une liste vide.
+        if (path != null)
+        {
+            _pushbackPath = new List<Transform>(path);
+        }
+        else
+        {
+            _pushbackPath = new List<Transform>();
+        }
+    
+        // On commence au premier point.
         _pushbackIndex = 0;
     }
 
+    // Fonction pour lancer le pushback aprËs autorisation.
     public void StartPushback()
     {
-        state = AirplaneState.Pushback;
+        // La porte est liberÈe dËs le depart du pushback.
+        AssignedGate = null;
+        // Si la liste des portes est ouverte, elle est mise ‡ jour.
+        _uiManager.RefreshGateButtonsIfOpen();
+
+        // Passe en Ètat pushback.
+        State = AirplaneState.Pushback;
+        // Recommence au premier point de pushback.
         _pushbackIndex = 0;
     }
 
-    void HandlePushback()
+    // Fonction pour dÈplacer l'avion sur son chemin de pushback.
+    private void MovePushback()
     {
+        // Si aucun chemin n'est configurÈ.
         if (_pushbackPath.Count == 0)
         {
-            Debug.LogWarning("‚ùå Aucun chemin de pushback !");
-            state = AirplaneState.Parked;
+            // On met l'avion dans un Ètat pour Èviter un blocage.
+            State = AirplaneState.Parked;
+            // On quitte la fonction.
             return;
         }
 
+        // Cible actuelle du pushback.
         Transform target = _pushbackPath[_pushbackIndex];
 
-        transform.position = Vector3.MoveTowards(
-            transform.position,
-            target.position,
-            pushbackSpeed * Time.deltaTime
+        // Avance vers le point de pushback courant avec sa vitesse propre.
+        transform.position = Vector3.MoveTowards(transform.position, target.position, PushbackSpeed * Time.deltaTime
         );
 
+        // Si l'avion est arrive au point courant.
         if (Vector3.Distance(transform.position, target.position) < 0.2f)
         {
+            // Passe au point suivant.
             _pushbackIndex++;
 
+            // Si le pushback est fini.
             if (_pushbackIndex >= _pushbackPath.Count)
             {
-                state = AirplaneState.Parked;
+                // L'avion demande l'autorisation de rouler vers la piste.
+                State = AirplaneState.TaxiRequest;
             }
         }
     }
 
-    // üîä CLICK AVEC SON
-    void HandleClick()
+    // Fonction pour gÈrÈ le clic sur l'avion et jouer un son en mÍme temps.
+    private void CheckClickSelection()
     {
-        if (state == AirplaneState.AtGateWaitingPushback)
+        // Quand l'avion est a la gate, on ne veut pas ouvrir son UI.
+        if (State == AirplaneState.AtGate) 
+        {
             return;
+        }
 
-        if (Mouse.current == null) return;
-
+        // Si le clic gauche vient d'Ítre prÈssÈ.
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
+            // On convertit la position souris en position monde.
             Vector2 mousePos = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            // On lance un Raycast pour vÈrifiÈ sur quel collider est la souris.
             RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
 
+            // Si le raycast touche cet avion.
             if (hit.collider != null && hit.collider.gameObject == gameObject)
             {
-                // üîä joue le son
-                if (_audioSource != null && clickSound != null)
-                    _audioSource.PlayOneShot(clickSound);
-
-                _uiManager?.SetTarget(transform);
+                // Si un son et une source audio existent, on joue le son de clic.
+                if (_audioSource != null && ClickSound != null) 
+                {
+                    _audioSource.PlayOneShot(ClickSound);
+                }
+                    
+                // On ouvre l'UI sur cet avion.
+                _uiManager.SetTarget(transform);
             }
         }
     }
 
-    Transform GetTarget()
+    // Fonction qui retourne la cible actuelle selon l'Ètat.
+    private Transform GetTarget()
     {
-        if (state == AirplaneState.Pushback && _pushbackPath.Count > 0)
-            return _pushbackPath[_pushbackIndex];
+        // Pendant le pushback, la cible est le point de pushback courant.
+        if (State == AirplaneState.Pushback && _pushbackPath.Count > 0) 
+        {
+             return _pushbackPath[_pushbackIndex];
+        }
 
-        if (state == AirplaneState.GoingToGate && _taxiPath.Count > 0)
+
+        // Pendant le dÈcollage, la cible est le point de dÈcollage courant.
+        if (State == AirplaneState.TakingOff && _takeoffPath.Count > 0) 
+        {
+            return _takeoffPath[_takeoffIndex];
+        }
+            
+
+        // Pendant le taxi, la cible est le point de taxi courant.
+        if ((State == AirplaneState.GoingToGate || State == AirplaneState.TaxiingToRunway) && _taxiPath.Count > 0)
+        {
+            // On retourne le prochain point du chemin de taxi.
             return _taxiPath[_taxiIndex];
+        }
 
-        if (state == AirplaneState.Approach ||
-            state == AirplaneState.SlowingApproach ||
-            state == AirplaneState.Cleared)
-            return runwayPoint;
+        // Pendant l'approche, l'avion vise le RunwayPoint.
+        if (State == AirplaneState.Approach || State == AirplaneState.SlowingApproach || State == AirplaneState.Cleared) 
+        { 
+            return RunwayPoint;
+        }
 
-        if (state == AirplaneState.GoAround)
+
+        // Pendant un go around, l'avion vise le point de go around.
+        if (State == AirplaneState.GoAround) 
+        {
             return _goAroundPoint;
+        }
+            
 
+        // Par defaut, l'avion vise sa propre position
         return transform;
     }
 
+    // Fonction pour assigner une gate a l'avion.
     public void AssignGate(Transform gate)
     {
-        assignedGate = gate;
-        state = AirplaneState.GoingToGate;
+        // On mÈmorise la gate choisie.
+        AssignedGate = gate;
+        // L'avion commence ‡ rouler vers cette gate.
+        State = AirplaneState.GoingToGate;
 
+        // GÈnËre le chemin vers la gate.
         GeneratePath(gate);
 
+        // On rÈcupËre le chemin de pushback configurÈ sur cette gate.
         var pushback = gate.GetComponent<GatePushbackPath>();
+        // Si la gate a un script de pushback.
         if (pushback != null)
         {
-            SetPushbackPath(pushback.pushbackPoints);
+            // On assigne les points de pushback ‡ l'avion.
+            SetPushbackPath(pushback.PushbackPoints);
+            // On mÈmorise la sortie de pushback pour le futur chemin vers la piste.
+            _pushbackExitPoint = pushback.PushbackExitPoint;
         }
     }
 
-    void GeneratePath(Transform gate)
+    // Fonction qui gÈnËre le chemin vers une gate.
+    private void GeneratePath(Transform gate)
     {
+        // On vide l'ancien chemin.
         _taxiPath.Clear();
 
+        // On demande au manager le chemin vers cette gate.
         List<Transform> path = _taxiwayManager.GetPathForGate(gate);
 
+        // Si un chemin existe.
         if (path != null)
         {
+            // On ajoute les points intermediaires.
             _taxiPath.AddRange(path);
+            // On ajoute la gate comme dernier point.
             _taxiPath.Add(gate);
         }
 
+        // On repart au premier point.
         _taxiIndex = 0;
     }
 
-    public void AllowLanding() => state = AirplaneState.Cleared;
-    public void GoAround() => state = AirplaneState.GoAround;
-    public void StopMovement() => state = AirplaneState.Stopped;
+    // Fonction pour gÈnÈrer le chemin depuis la sortie de pushback vers le point d'arrÍt.
+    private void GenerateRunwayPath()
+    {
+        // On vide l'ancien chemin.
+        _taxiPath.Clear();
 
+        // Si aucun point de sortie n'est assigne, on utilise le dernier point de pushback.
+        if (_pushbackExitPoint == null && _pushbackPath.Count > 0) 
+        {
+            _pushbackExitPoint = _pushbackPath[_pushbackPath.Count - 1];
+        }
+            
+
+        // On demande au manager le chemin correspondant a cette sortie de pushback.
+        List<Transform> path = _taxiwayManager.GetPathFromPushback(_pushbackExitPoint);
+
+        // Si un chemin existe, on l'ajoute.
+        if (path != null) 
+        {
+            _taxiPath.AddRange(path);
+        }
+
+        // On repart au premier point.
+        _taxiIndex = 0;
+    }
+
+    // Fonction pour lancer le roulage vers la piste.
+    private void StartTaxiToRunway()
+    {
+        // On CrÈÈ le chemin vers la piste.
+        GenerateRunwayPath();
+
+        // Si aucun chemin n'a ete trouve.
+        if (_taxiPath.Count == 0)
+        {
+            // On place l'avion en Ètat Parked pour eviter qu'il reste bloquÈ.
+            State = AirplaneState.Parked;
+            // On quitte la fonction.
+            return;
+        }
+
+        // L'avion roule vers le point d'arrÍt.
+        State = AirplaneState.TaxiingToRunway;
+    }
+
+    // Fonction qui autorise le roulage vers la piste.
+    public void AllowTaxiToRunway()
+    {
+        // On n'autorise cette action que si l'avion la demandÈ.
+        if (State != AirplaneState.TaxiRequest) 
+        {
+            return;
+        } 
+
+        // On lance le roulage vers la piste.
+        StartTaxiToRunway();
+    }
+
+    // Fonction qui autorise le dÈcollage.
+    public void AllowTakeoff()
+    {
+        // On n'autorise cette action que si l'avion attend le dÈcollage.
+        if (State != AirplaneState.TakeoffRequest) 
+        {
+            return;
+        } 
+
+        // On repart au premier point de dÈcollage.
+        _takeoffIndex = 0;
+        // On remet la vitesse de dÈcollage ‡ zÈro pour accÈlÈrer progressivement.
+        _currentTakeoffSpeed = 0f;
+        // On rÈcupËre le chemin de dÈcollage
+        _takeoffPath = _taxiwayManager.GetTakeoffPath();
+
+        // Si aucun chemin de decollage n'est configurÈ.
+        if (_takeoffPath.Count == 0)
+        {
+            // On considËre que le dÈcollage est terminÈ.
+            State = AirplaneState.TakeoffComplete;
+            // On donne quand mÍme les points de decollage.
+            ScoreTakeoff();
+            // On quitte la fonction.
+            return;
+        }
+
+        // L'avion commence son dÈcollage.
+        State = AirplaneState.TakingOff;
+    }
+
+    // Fonction qui gËre le mouvement de dÈcollage avec l'accÈlÈration.
+    private void MoveTakeoff()
+    {
+        // Si aucun chemin n'existe, on termine.
+        if (_takeoffPath.Count == 0)
+        {
+            // Etat final du dÈcollage.
+            State = AirplaneState.TakeoffComplete;
+            // On quitte la fonction.
+            return;
+        }
+
+        // Point de dÈcollage courant.
+        Transform target = _takeoffPath[_takeoffIndex];
+
+        // On accÈlËre progressivement jusqu'a MaxTakeoffSpeed.
+        _currentTakeoffSpeed = Mathf.MoveTowards(_currentTakeoffSpeed, MaxTakeoffSpeed, TakeoffAcceleration * Time.deltaTime);
+
+        // On avance vers le point courant avec la vitesse actuelle.
+        transform.position = Vector3.MoveTowards(transform.position, target.position, _currentTakeoffSpeed * Time.deltaTime);
+
+        // Si l'avion atteint le point courant.
+        if (Vector3.Distance(transform.position, target.position) < 0.2f)
+        {
+            // On passe au point suivant.
+            _takeoffIndex++;
+
+            // Si le dernier point est atteint.
+            if (_takeoffIndex >= _takeoffPath.Count)
+            {
+                // On passe en Ètat de dÈcollage terminÈ.
+                State = AirplaneState.TakeoffComplete;
+                // On garde l'index sur le dernier point validÈ.
+                _takeoffIndex = _takeoffPath.Count - 1;
+                // On donne les points du dÈcollage.
+                ScoreTakeoff();
+                // On dÈtruit l'avion pour Èviter des problËmes
+                Destroy(gameObject);
+            }
+        }
+    }
+
+    // Fonction qui donne les points de dÈcollage
+    private void ScoreTakeoff()
+    {
+        // Si les points ont deja ÈtÈ donnÈs, on Èvite de les redonner.
+        if (_takeoffScored) 
+        {
+            return;
+        }
+        
+
+        // On ajoute les points dans le GameManager.
+        GameManager.Instance.AddTakeoffPoints();
+        // On mÈmorise que les points ont ÈtÈ donnÈs.
+        _takeoffScored = true;
+    }
+
+    // Fonction pour autorisÈ l'atterrissage.
+    public void AllowLanding() 
+    {
+        State = AirplaneState.Cleared;
+    }
+    
+    // Fonction pour mettre l'avion en go around.
+    public void GoAround() 
+    { 
+        State = AirplaneState.GoAround; 
+    }
+
+    // FOnction qui stoppe le roulage si possible.
+    public void StopMovement()
+    {
+        // Si l'avion n'est pas dans un Ètat stoppable, on ne fait rien.
+        if (!CanStopMovement()) 
+        {
+            return;
+        }
+        
+
+        // On mÈmorise l'Ètat actuel pour reprendre le bon roulage.
+        _stateBeforeStop = State;
+        // On passe en Ètat stoppe.
+        State = AirplaneState.Stopped;
+    }
+
+    // Fonction qui reprend le roulage aprËs un stop.
     public void ResumeMovement()
     {
-        if (assignedGate != null)
-            state = AirplaneState.GoingToGate;
+        // Si l'avion Ètait en roulage vers une gate ou la piste, on reprend cet Ètat.
+        if (_stateBeforeStop == AirplaneState.GoingToGate || _stateBeforeStop == AirplaneState.TaxiingToRunway)
+        {
+            State = _stateBeforeStop;
+        }
+        // Si l'avion avait une gate, il reprend vers la gate.
+        else if (AssignedGate != null)
+        {
+            State = AirplaneState.GoingToGate;
+        }
     }
 
+    // FOnction qui indique si le bouton Stop peut apparaitre.
+    public bool CanStopMovement()
+    {
+        // On peut stopper seulement les roulages.
+        return State == AirplaneState.GoingToGate || State == AirplaneState.TaxiingToRunway;
+    }
+
+    // Fonction qui indique si l'avion est dans la zone de ralentissement.
     public bool IsSlowingDown()
     {
-        return Vector3.Distance(transform.position, runwayPoint.position) < slowRadius;
+        // On compare la distance entre l'avion et le RunwayPoint au rayon de ralentissement.
+        return Vector3.Distance(transform.position, RunwayPoint.position) < SlowRadius;
     }
 
-    void UpdateColor()
+    // Fonction qui indique si l'avion est considÈrÈ comme Ètant a la porte.
+    private bool IsAtGate()
     {
-        if (_spriteRenderer == null) return;
+        // Ces etats ne doivent pas causer de game over en cas de contact.
+        return State == AirplaneState.AtGate || State == AirplaneState.PushbackRequest;
+    }
 
-        Color col = startColor;
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        // GetComponentInParent marche meme si le collider est sur un enfant de l'avion.
+        Airplane other = collision.gameObject.GetComponentInParent<Airplane>();
+        // On gËre la collision avec l'autre avion trouvÈ.
+        CheckAirplaneCollision(other);
+    }
 
-        if (state == AirplaneState.Approach ||
-            state == AirplaneState.SlowingApproach ||
-            state == AirplaneState.WaitingAtRunway ||
-            state == AirplaneState.PushbackRequest ||
-            state == AirplaneState.Stopped ||
-            state == AirplaneState.Parked)
+    // Collision 2D avec un collider configure en trigger.
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        // On rÈcupËre l'avion sur l'objet touche ou son parent.
+        Airplane otherAirplane = other.GetComponentInParent<Airplane>();
+        // On gËre la collision avec l'autre avion trouvÈ.
+        CheckAirplaneCollision(otherAirplane);
+    }
+
+    // Fonction qui dÈcide si une collision entre deux avions cause un game over.
+    private void CheckAirplaneCollision(Airplane other)
+    {
+        // Si l'autre objet n'est pas un avion, on l'ignore.
+        if (other == null) 
         {
+            return;
+        }
+        // Si Unity nous renvoie nous-meme, on ignore.
+        if (other == this) 
+        {
+            return;
+        }
+
+        // Si un des avions est a la porte, on ignore la collision sinon impossible d'avoir tout les avion a toutes les gate.
+        if (IsAtGate() || other.IsAtGate()) 
+        {
+            return;
+        } 
+
+        // Sinon, deux avions se touchent = game over.
+        GameManager.Instance.GameOver();
+    }
+
+    // Fonction qui met ‡ jour la couleur de l'avion selon son Ètat.
+    private void UpdateColor()
+    {
+        // Si aucun SpriteRenderer n'existe, impossible de changer la couleur.
+        if (_spriteRenderer == null) 
+        {
+            return;
+        }
+        
+
+        // Couleur par defaut de l'avion.
+        Color col = StartColor;
+
+        // Rouge signifie que l'avion attend une action de la part du joueur.
+        if (State == AirplaneState.Approach || State == AirplaneState.SlowingApproach || State == AirplaneState.WaitingAtRunway || State == AirplaneState.PushbackRequest || State == AirplaneState.TaxiRequest || State == AirplaneState.TakeoffRequest || State == AirplaneState.Stopped || State == AirplaneState.Parked)
+        {
+            // On applique le rouge.
             col = Color.red;
         }
-        else if (state == AirplaneState.Cleared ||
-                 state == AirplaneState.GoingToGate ||
-                 state == AirplaneState.Pushback ||
-                 state == AirplaneState.GoAround)
+        // Vert signifie que l'avion est autorisÈ et en train de suivre une action.
+        else if (State == AirplaneState.Cleared || State == AirplaneState.GoingToGate || State == AirplaneState.TaxiingToRunway || State == AirplaneState.Pushback || State == AirplaneState.TakingOff || State == AirplaneState.TakeoffComplete || State == AirplaneState.GoAround)
         {
+            // On applique le vert.
             col = Color.green;
         }
-        else if (state == AirplaneState.AtGateWaitingPushback)
+        // A la porte, l'avion reprend sa couleur de base.
+        else if (State == AirplaneState.AtGate)
         {
-            col = startColor;
+            // On applique la couleur de base.
+            col = StartColor;
         }
 
+        // On applique la couleur finale au sprite.
         _spriteRenderer.color = col;
     }
 }

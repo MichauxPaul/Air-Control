@@ -3,49 +3,59 @@ using System.Collections;
 
 public class AirplaneSpawner : MonoBehaviour
 {
-    [SerializeField] private GameObject planePrefab;
-    [SerializeField] private Transform pointA;
-    [SerializeField] private Transform runwayPoint;
+    // Prefab de l'avion a instancier.
+    [SerializeField] private GameObject _planePrefab;
+    // Point de départ des avions.
+    [SerializeField] private Transform _pointA;
+    // Point de fin de piste que les avions doivent rejoindre à l'approche.
+    [SerializeField] private Transform _runwayPoint;
 
-    [Header("Paramètres de Spawn")]
-    [SerializeField] private float startDelay = 40f;      // Délai au début
-    [SerializeField] private float endDelay = 5f;        // Délai après 5 mins
-    [SerializeField] private float timeToReachMaxIntensity = 300f; // 5 minutes en secondes
+    [Header("Parametres du Spawner")]
+    // Délai au début de la partie entre deux avions.
+    [SerializeField] private float _startDelay = 40f;
+    // Délai final entre deux avions quand l'intensité est maximale.
+    [SerializeField] private float _endDelay = 5f;
+    // Temps nécéssaire pour passer progressivement de _startDelay à _endDelay.
+    [SerializeField] private float _timeToReachMaxIntensity = 300f;
 
-    private float timer;
-
-    void Start()
+    private void Start()
     {
-        // On lance la routine de spawn
+        //  On fait une coroutine qui nous permet d'attendre entre deux spawns sans bloquer le jeu.
         StartCoroutine(SpawnRoutine());
     }
 
-    IEnumerator SpawnRoutine()
+    // Coroutine qui fait apparaitre des avions en boucle.
+    private IEnumerator SpawnRoutine()
     {
+        //  Tant que la scene tourne.
         while (true)
         {
+            // On créé un avion.
             SpawnPlane();
 
-            // Calcul du ratio de progression (entre 0 et 1)
-            // Time.timeSinceLevelLoad donne le temps écoulé depuis le début de la scène
-            float progress = Mathf.Clamp01(Time.timeSinceLevelLoad / timeToReachMaxIntensity);
+            // Progression entre 0 et 1 selon le temps écoule depuis le debut de la scène.
+            float progress = Mathf.Clamp01(Time.timeSinceLevelLoad / _timeToReachMaxIntensity);
 
-            // Interpolation linéaire entre le délai de départ et le délai de fin
-            float currentDelay = Mathf.Lerp(startDelay, endDelay, progress);
+            // On fait une interpolation avec Lerp entre le delai de départ et le delai final.
+            float currentDelay = Mathf.Lerp(_startDelay, _endDelay, progress);
 
-            // On attend le délai calculé avant le prochain spawn
+            // On met la coroutine en pause avec WaitForSeconds avant le prochain avion.
             yield return new WaitForSeconds(currentDelay);
         }
     }
 
-    void SpawnPlane()
+    // Fonction qui créé un avion dans la scène.
+    private void SpawnPlane()
     {
-        GameObject plane = Instantiate(planePrefab, pointA.position, Quaternion.identity);
+        // On instantie le prefab à la position du point de départ et en lui fesant une rotation.
+        GameObject plane = Instantiate(_planePrefab, _pointA.position, Quaternion.identity);
+        // On récupère le script Airplane sur le prefab créé.
         Airplane airplane = plane.GetComponent<Airplane>();
 
+        // Si le script existe, on lui donne le point de fin de piste de cette scène.
         if (airplane != null)
         {
-            airplane.runwayPoint = runwayPoint;
+            airplane.RunwayPoint = _runwayPoint;
         }
     }
 }

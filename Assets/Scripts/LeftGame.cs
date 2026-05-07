@@ -3,11 +3,11 @@ using UnityEngine;
 
 public class LeftGame : MonoBehaviour
 {
-    public void leftGame()
+    public void QuitGame()
     {
-        //sortir du mode play de l'Ã©diteur
+        // On arrête le mode Play.
         EditorApplication.isPlaying = false;
-        //quitter le jeu "classiquement"
+        // On ferme l'application.
         Application.Quit();
     }
 }

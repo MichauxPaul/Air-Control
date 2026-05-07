@@ -554,15 +554,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 298e42e53155e6441b52c3da916c4e39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  runwayPoint: {fileID: 0}
-  initialSpeed: 2
-  slowRadius: 8.2
-  taxiSpeed: 0.15
-  pushbackSpeed: 0.05
-  assignedGate: {fileID: 0}
-  startColor: {r: 1, g: 1, b: 1, a: 1}
-  clickSound: {fileID: 8300000, guid: 394ba6247e7ad864cbd80a47f40fde76, type: 3}
-  state: 0
+  RunwayPoint: {fileID: 0}
+  InitialSpeed: 2
+  SlowRadius: 5
+  TaxiSpeed: 0.5
+  PushbackSpeed: 0.01
+  MaxTakeoffSpeed: 8
+  TakeoffAcceleration: 0.15
+  AssignedGate: {fileID: 0}
+  StartColor: {r: 1, g: 1, b: 1, a: 1}
+  ClickSound: {fileID: 8300000, guid: 394ba6247e7ad864cbd80a47f40fde76, type: 3}
+  State: 0
 --- !u!82 &-6078719991745389160
 AudioSource:
   m_ObjectHideFlags: 0
