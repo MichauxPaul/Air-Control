@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -23,6 +24,14 @@ public class GameManager : MonoBehaviour
     public GameObject GameOverPanel;
     // Texte dans le panel de game over pour afficher le Score final.
     public TextMeshProUGUI GameOverScoreText;
+
+    [Header("Audio")]
+    // Ambience sonore du jeu pendant la partie
+    public AudioSource BackgroundAudio;
+    // AudioSource pour les SFX
+    public AudioSource SFXSource;
+    // Son joué lors d'une collision
+    public AudioClip CollisionSound;
 
     // on empêche de declencher plusieurs game over en même temps.
     private bool _isGameOver;
@@ -76,31 +85,64 @@ public class GameManager : MonoBehaviour
     private void RefreshScore()
     {
         // Si aucun texte n'est assigne dans l'inspecteur, on evite une erreur.
-        if (ScoreText == null) return;
+        if (ScoreText == null) 
+        {
+            return;
+        } 
 
         // N0 affiche le nombre avec des separateurs de milliers et aucun chiffre decimal.
         ScoreText.text = Score.ToString("N0");
     }
 
-    // Declenche la fin de partie.
+    // Déclenche la fin de partie.
     public void GameOver()
     {
         // Si le game over est deja actif, on ne le redéclenche pas.
-        if (_isGameOver) return;
+        if (_isGameOver) 
+        {
+            return;
+        } 
 
         // On mémorise que la partie est terminée.
         _isGameOver = true;
 
-        // Si le panel est assigne, on l'affiche.
-        if (GameOverPanel != null)
-            GameOverPanel.SetActive(true);
+        // On lance la séquence de game over.
+        StartCoroutine(GameOverCoroutine());
+    }
 
-        // Si le texte final est assigne, on affiche le Score final dedans.
-        if (GameOverScoreText != null)
-            GameOverScoreText.text = "Score : " + Score.ToString("N0");
-
+    public IEnumerator GameOverCoroutine()
+    {
         // Time.timeScale a 0 met le jeu en pause 
         Time.timeScale = 0f;
+
+        // On joue le son de collision.
+        if (SFXSource != null && CollisionSound != null)
+        {
+            SFXSource.PlayOneShot(CollisionSound);
+
+            // On attend la fin du son.
+            yield return new WaitForSecondsRealtime(CollisionSound.length);
+        }
+
+        // On arrête la musique de fond
+        if (BackgroundAudio != null)
+        {
+            BackgroundAudio.Stop();
+        }
+
+        // Si le panel est assigné, on l'affiche.
+        if (GameOverPanel != null)
+        {
+            GameOverPanel.SetActive(true);
+        }
+
+
+        // Si le texte final est assigné, on affiche le Score final dedans.
+        if (GameOverScoreText != null)
+        {
+            GameOverScoreText.text = "Votre score était de : " + Score.ToString("N0");
+        }
+
     }
 
     // Fonction pour recommencer le jeu.
