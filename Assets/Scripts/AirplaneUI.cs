@@ -11,7 +11,7 @@ public class AirplaneUI : MonoBehaviour
     public Transform Target;
     // Script Airplane associe a la cible.
     public Airplane CurrentAirplane;
-    // Décalage visuel pour afficher l'UI un peu au-dessus de l'avion.
+    // DÃ©calage visuel pour afficher l'UI un peu au-dessus de l'avion.
     public Vector3 Offset = new Vector3(0, 1.5f, 0);
 
     [Header("UI Groups")]
@@ -24,16 +24,16 @@ public class AirplaneUI : MonoBehaviour
     public GameObject ResumeButton;
 
     [Header("Gates")]
-    // Parent qui contient toutes les gates de la scène.
+    // Parent qui contient toutes les gates de la scÃ¨ne.
     public Transform GatesContainer;
-    // Prefab de bouton utilisé pour chaque gate disponible.
+    // Prefab de bouton utilisÃ© pour chaque gate disponible.
     public GameObject GateButtonPrefab;
     // Parent UI dans lequel les boutons de gate sont instancies.
     public Transform GateButtonParent;
 
-    // Indique si les boutons de gate ont déjà ete créés pour éviter de les recréer chaque frame.
+    // Indique si les boutons de gate ont dÃ©jÃ  ete crÃ©Ã©s pour Ã©viter de les recrÃ©er chaque frame.
     private bool _gatesCreated = false;
-    // Indique si l'avion a déjà une gate assignée.
+    // Indique si l'avion a dÃ©jÃ  une gate assignÃ©e.
     private bool _gateSelectionLocked = false;
 
     [Header("Pushback")]
@@ -47,50 +47,50 @@ public class AirplaneUI : MonoBehaviour
 
     private void Start()
     {
-        // L'UI commence cachée tant qu'aucun avion n'est sélectionné.
+        // L'UI commence cachÃ©e tant qu'aucun avion n'est sÃ©lectionnÃ©.
         gameObject.SetActive(false);
 
-        // On cache le bouton stop au départ.
+        // On cache le bouton stop au dÃ©part.
         StopButton.SetActive(false);
-        // On cache le bouton reprise au départ.
+        // On cache le bouton reprise au dÃ©part.
         ResumeButton.SetActive(false);
-        // On cache la liste des gates au départ.
+        // On cache la liste des gates au dÃ©part.
         GateScrollView.SetActive(false);
-        // On cache les boutons d'atterrissage au départ.
+        // On cache les boutons d'atterrissage au dÃ©part.
         LandingButtons.SetActive(false);
 
-        // Si le bouton pushback est assigné, on le cache.
+        // Si le bouton pushback est assignÃ©, on le cache.
         if (PushbackButton != null)
             PushbackButton.SetActive(false);
 
-        // Si le bouton taxi est assigné, on le cache.
+        // Si le bouton taxi est assignÃ©, on le cache.
         if (TaxiButton != null)
             TaxiButton.SetActive(false);
 
-        // Si le bouton decollage est assigné, on le cache.
+        // Si le bouton decollage est assignÃ©, on le cache.
         if (TakeoffButton != null)
             TakeoffButton.SetActive(false);
     }
 
     private void Update()
     {
-        // Si aucune cible n'est selectionnée, l'UI n'a rien a suivre.
+        // Si aucune cible n'est selectionnÃ©e, l'UI n'a rien a suivre.
         if (Target == null) 
         {
             return;
         }
             
 
-        // On convertit la position monde de l'avion en position écran pour placer l'UI.
+        // On convertit la position monde de l'avion en position Ã©cran pour placer l'UI.
         Vector3 pos = Camera.main.WorldToScreenPoint(Target.position + Offset);
-        // On applique la position calculée à l'UI.
+        // On applique la position calculÃ©e Ã  l'UI.
         transform.position = pos;
 
-        // On récupère le zoom de la caméra.
+        // On rÃ©cupÃ¨re le zoom de la camÃ©ra.
         float zoom = Camera.main.orthographicSize;
-        // On calcule une échelle inverse au zoom pour garder l'UI lisible.
+        // On calcule une Ã©chelle inverse au zoom pour garder l'UI lisible.
         float scale = (1f / zoom) * 5f;
-        // On applique l'échelle à l'UI.
+        // On applique l'Ã©chelle Ã  l'UI.
         transform.localScale = Vector3.one * scale;
 
         // Si le joueur clique gauche cette frame.
@@ -100,59 +100,59 @@ public class AirplaneUI : MonoBehaviour
             if (!IsClickInsideThisUI())
             {
                 CloseUI();
-                // On quitte Update pour ne pas rafraichir une UI fermée.
+                // On quitte Update pour ne pas rafraichir une UI fermÃ©e.
                 return;
             }
         }
 
-        // On met à jour l'affichage des gates.
+        // On met Ã  jour l'affichage des gates.
         RefreshGateUI();
-        // On met à jour les boutons stop/reprise.
+        // On met Ã  jour les boutons stop/reprise.
         RefreshStopResumeUI();
-        // On met à jour les boutons d'atterrissage.
+        // On met Ã  jour les boutons d'atterrissage.
         RefreshLandingUI();
-        // On met à jour le bouton pushback.
+        // On met Ã  jour le bouton pushback.
         RefreshPushbackUI();
-        // On met à jour le bouton d'autorisation de roulage.
+        // On met Ã  jour le bouton d'autorisation de roulage.
         RefreshTaxiUI();
-        // On met à jour le bouton d'autorisation de decollage.
+        // On met Ã  jour le bouton d'autorisation de decollage.
         RefreshTakeoffUI();
     }
 
-    // Fonction qui sélectionne un avion comme cible de l'UI.
+    // Fonction qui sÃ©lectionne un avion comme cible de l'UI.
     public void SetTarget(Transform t)
     {
-        // On mémorise le Transform de l'avion.
+        // On mÃ©morise le Transform de l'avion.
         Target = t;
-        // On récupère le script Airplane sur cet objet.
+        // On rÃ©cupÃ¨re le script Airplane sur cet objet.
         CurrentAirplane = t.GetComponent<Airplane>();
 
         // On affiche l'UI.
         gameObject.SetActive(true);
 
-        // On force la régénération des boutons de gate si nécessaire.
+        // On force la rÃ©gÃ©nÃ©ration des boutons de gate si nÃ©cessaire.
         _gatesCreated = false;
-        // On vérrouille la selection si l'avion a déjà une gate.
+        // On vÃ©rrouille la selection si l'avion a dÃ©jÃ  une gate.
         _gateSelectionLocked = CurrentAirplane != null && CurrentAirplane.AssignedGate != null;
 
         // On cache la liste des gates au moment de l'ouverture.
         GateScrollView.SetActive(false);
 
-        // On cache le bouton pushback à l'ouverture.
+        // On cache le bouton pushback Ã  l'ouverture.
         if (PushbackButton != null) 
         {
             PushbackButton.SetActive(false);
         }
 
 
-        // On cache le bouton taxi à l'ouverture.
+        // On cache le bouton taxi Ã  l'ouverture.
         if (TaxiButton != null) 
         {
             TaxiButton.SetActive(false);
         }
             
 
-        // On cache le bouton décollage à l'ouverture.
+        // On cache le bouton dÃ©collage Ã  l'ouverture.
         if (TakeoffButton != null) 
         {
             TakeoffButton.SetActive(false); 
@@ -171,7 +171,7 @@ public class AirplaneUI : MonoBehaviour
         // On cache l'UI.
         gameObject.SetActive(false);
 
-        // On déverrouille la sélection de gate pour la prochaine ouverture.
+        // On dÃ©verrouille la sÃ©lection de gate pour la prochaine ouverture.
         _gateSelectionLocked = false;
 
         // On cache le bouton pushback.
@@ -188,7 +188,7 @@ public class AirplaneUI : MonoBehaviour
         }
 
 
-        // On cache le bouton de décollage.
+        // On cache le bouton de dÃ©collage.
         if (TakeoffButton != null) 
         {
             TakeoffButton.SetActive(false);
@@ -199,7 +199,7 @@ public class AirplaneUI : MonoBehaviour
     // Fonction qui affiche ou cache les boutons d'atterrissage.
     private void RefreshLandingUI()
     {
-        // Si aucun avion n'est sélectionné, on cache les boutons.
+        // Si aucun avion n'est sÃ©lectionnÃ©, on cache les boutons.
         if (CurrentAirplane == null)
         {
             LandingButtons.SetActive(false);
@@ -207,7 +207,7 @@ public class AirplaneUI : MonoBehaviour
             return;
         }
 
-        // Si la liste des gates est ouverte, on cache les boutons landing pour éviter les conflits d'UI.
+        // Si la liste des gates est ouverte, on cache les boutons landing pour Ã©viter les conflits d'UI.
         if (GateScrollView.activeSelf)
         {
             LandingButtons.SetActive(false);
@@ -222,46 +222,46 @@ public class AirplaneUI : MonoBehaviour
         LandingButtons.SetActive(showLanding);
     }
 
-    // Fonction appelé par le bouton d'autorisation d'atterrissage
+    // Fonction appelÃ© par le bouton d'autorisation d'atterrissage
     public void ApproveLanding()
     {
-        // On autorise l'avion à atterrir.
+        // On autorise l'avion Ã  atterrir.
         CurrentAirplane.AllowLanding();
-        // On cache les boutons landing après le clic.
+        // On cache les boutons landing aprÃ¨s le clic.
         LandingButtons.SetActive(false);
     }
 
-    // Fonction appelé par le bouton de go around
+    // Fonction appelÃ© par le bouton de go around
     public void SendGoAround()
     {
         // On envoie l'avion vers le point de go around.
         CurrentAirplane.GoAround();
-        // On cache les boutons landing après le clic.
+        // On cache les boutons landing aprÃ¨s le clic.
         LandingButtons.SetActive(false);
     }
 
-    //  Fonction appelé par le bouton Stop.
+    //  Fonction appelÃ© par le bouton Stop.
     public void StopRoulage()
     {
-        // On demande à l'avion de stopper son roulage.
+        // On demande Ã  l'avion de stopper son roulage.
         CurrentAirplane.StopMovement();
-        // On met les boutons à jour.
+        // On met les boutons Ã  jour.
         RefreshStopResumeUI();
     }
 
-    // Fonction appelé par le bouton de reprise du roulage
+    // Fonction appelÃ© par le bouton de reprise du roulage
     public void ResumeRoulage()
     {
-        // On demande à l'avion de reprendre son roulage.
+        // On demande Ã  l'avion de reprendre son roulage.
         CurrentAirplane.ResumeMovement();
-        // On met les boutons à jour.
+        // On met les boutons Ã  jour.
         RefreshStopResumeUI();
     }
 
-    // Fonction qui affiche Stop ou Reprise selon l'état de l'avion.
+    // Fonction qui affiche Stop ou Reprise selon l'Ã©tat de l'avion.
     private void RefreshStopResumeUI()
     {
-        // Si aucun avion n'est sélectionné, on cache les deux boutons.
+        // Si aucun avion n'est sÃ©lectionnÃ©, on cache les deux boutons.
         if (CurrentAirplane == null || !gameObject.activeInHierarchy)
         {
             // On cache le bouton Stop.
@@ -272,14 +272,14 @@ public class AirplaneUI : MonoBehaviour
             return;
         }
 
-        // On demande à l'avion s'il est actuellement arrêté.
+        // On demande Ã  l'avion s'il est actuellement arrÃªtÃ©.
         bool isStopped = CurrentAirplane.IsStopped();
-        // On demande à l'avion s'il est dans un état ou le stop est permis.
+        // On demande Ã  l'avion s'il est dans un Ã©tat ou le stop est permis.
         bool canStop = CurrentAirplane.CanStopMovement();
 
-        // Stop s'affiche seulement si l'avion peut être arrêté et n'est pas déjà arrêté.
+        // Stop s'affiche seulement si l'avion peut Ãªtre arrÃªtÃ© et n'est pas dÃ©jÃ  arrÃªtÃ©.
         StopButton.SetActive(canStop && !isStopped);
-        // Reprise s'affiche seulement quand l'avion est arrêté.
+        // Reprise s'affiche seulement quand l'avion est arrÃªtÃ©.
         ResumeButton.SetActive(isStopped);
     }
 
@@ -300,19 +300,19 @@ public class AirplaneUI : MonoBehaviour
         PushbackButton.SetActive(show);
     }
 
-    // Fonction appelé par le bouton d'autorisation pushback.
+    // Fonction appelÃ© par le bouton d'autorisation pushback.
     public void ApprovePushback()
     {
-        // Si aucun avion n'est selectionné, on sort de la fonction.
+        // Si aucun avion n'est selectionnÃ©, on sort de la fonction.
         if (CurrentAirplane == null) 
         {
             return;
         } 
 
-        // On lance le pushback côté avion.
+        // On lance le pushback cÃ´tÃ© avion.
         CurrentAirplane.StartPushback();
 
-        // On ferme l'UI après l'action.
+        // On ferme l'UI aprÃ¨s l'action.
         CloseUI();
     }
 
@@ -333,83 +333,83 @@ public class AirplaneUI : MonoBehaviour
         TaxiButton.SetActive(show);
     }
 
-    // Fonction appelé par le bouton d'autorisation de roulage.
+    // Fonction appelÃ© par le bouton d'autorisation de roulage.
     public void ApproveTaxi()
     {
-        //  Si aucun avion n'est selectionné, on ne fait rien.
+        //  Si aucun avion n'est selectionnÃ©, on ne fait rien.
         if (CurrentAirplane == null) 
         {
             return;
         } 
 
-        // On autorise l'avion à rouler vers la piste.
+        // On autorise l'avion Ã  rouler vers la piste.
         CurrentAirplane.AllowTaxiToRunway();
 
-        // On ferme l'UI après l'action.
+        // On ferme l'UI aprÃ¨s l'action.
         CloseUI();
     }
 
-    // Fonction qui affiche ou cache le bouton d'autorisation de décollage.
+    // Fonction qui affiche ou cache le bouton d'autorisation de dÃ©collage.
     private void RefreshTakeoffUI()
     {
-        // Si aucun avion ou aucun bouton n'est assigné, on ne fait rien.
+        // Si aucun avion ou aucun bouton n'est assignÃ©, on ne fait rien.
         if (CurrentAirplane == null || TakeoffButton == null) 
         {
             return;
         }
             
 
-        // Le bouton décollage apparait quand l'avion demande le decollage.
+        // Le bouton dÃ©collage apparait quand l'avion demande le decollage.
         bool show = CurrentAirplane.State == Airplane.AirplaneState.TakeoffRequest;
 
         // On applique l'affichage.
         TakeoffButton.SetActive(show);
     }
 
-    // Fonction appelé par le bouton d'autorisation de décollage.
+    // Fonction appelÃ© par le bouton d'autorisation de dÃ©collage.
     public void ApproveTakeoff()
     {
-        // Securite si aucun avion n'est selectionné, on ne fait rien.
+        // Securite si aucun avion n'est selectionnÃ©, on ne fait rien.
         if (CurrentAirplane == null) 
         {
             return;
         } 
 
-        // On lance la séquence de décollage de l'avion.
+        // On lance la sÃ©quence de dÃ©collage de l'avion.
         CurrentAirplane.AllowTakeoff();
 
-        // On ferme l'UI après l'action.
+        // On ferme l'UI aprÃ¨s l'action.
         CloseUI();
     }
 
     // Fonction qui affiche ou cache la liste des portes disponibles.
     private void RefreshGateUI()
     {
-        // Si aucun avion n'est selectionné, on ne fait rien.
+        // Si aucun avion n'est selectionnÃ©, on ne fait rien.
         if (CurrentAirplane == null) 
         {
             return;
         } 
 
-        // On peut assigner une gate quand l'avion ralentit près de la fin de la piste ou se dirige déjà vers une gate.
+        // On peut assigner une gate quand l'avion ralentit prÃ¨s de la fin de la piste ou se dirige dÃ©jÃ  vers une gate.
         bool canAssignGate = CurrentAirplane.IsSlowingDown() || CurrentAirplane.State == Airplane.AirplaneState.GoingToGate;
 
-        // Si on peut assigner une gate et que la gate n'est pas déjà verrouillée.
+        // Si on peut assigner une gate et que la gate n'est pas dÃ©jÃ  verrouillÃ©e.
         if (canAssignGate && !_gateSelectionLocked)
         {
             // On affiche la liste des gates.
             GateScrollView.SetActive(true);
 
-            // On créé les boutons une seule fois tant que la liste reste ouverte.
+            // On crÃ©Ã© les boutons une seule fois tant que la liste reste ouverte.
             if (!_gatesCreated)
             {
-                // On génère les boutons de gates disponibles.
+                // On gÃ©nÃ¨re les boutons de gates disponibles.
                 CreateGateButtons();
-                // On mémorise que les boutons existent.
+                // On mÃ©morise que les boutons existent.
                 _gatesCreated = true;
             }
 
-            // On quitte pour ne pas cacher la liste juste après.
+            // On quitte pour ne pas cacher la liste juste aprÃ¨s.
             return;
         }
 
@@ -417,16 +417,16 @@ public class AirplaneUI : MonoBehaviour
         GateScrollView.SetActive(false);
     }
 
-    // Fonction qui vérifie si une gate est déjà occupée par un avion.
+    // Fonction qui vÃ©rifie si une gate est dÃ©jÃ  occupÃ©e par un avion.
     private bool IsGateOccupied(Transform gate)
     {
         // On cherche tous les avions actifs dans la scene.
         Airplane[] planes = FindObjectsByType<Airplane>(FindObjectsSortMode.None);
 
-        // On parcourt tous les avions trouvés.
+        // On parcourt tous les avions trouvÃ©s.
         foreach (var p in planes)
         {
-            // Si un avion a déjà cette gate d'assignée, alors elle est occupée.
+            // Si un avion a dÃ©jÃ  cette gate d'assignÃ©e, alors elle est occupÃ©e.
             if (p.AssignedGate == gate) 
             {
                 return true;
@@ -438,7 +438,7 @@ public class AirplaneUI : MonoBehaviour
         return false;
     }
 
-    // Fonction qui créé les boutons correspondant aux gates disponibles.
+    // Fonction qui crÃ©Ã© les boutons correspondant aux gates disponibles.
     private void CreateGateButtons()
     {
         // On supprime les anciens boutons pour reconstruire une liste propre.
@@ -448,10 +448,10 @@ public class AirplaneUI : MonoBehaviour
         }
             
 
-        // On parcourt toutes les gates placées dans le container.
+        // On parcourt toutes les gates placÃ©es dans le container.
         foreach (Transform gate in GatesContainer)
         {
-            // On ignore les gates déjà occupées.
+            // On ignore les gates dÃ©jÃ  occupÃ©es.
             if (IsGateOccupied(gate)) 
             {
                 continue;
@@ -461,10 +461,10 @@ public class AirplaneUI : MonoBehaviour
             // Variable locale pour que le listener garde la bonne gate.
             Transform capturedGate = gate;
 
-            // On créé un bouton a partir du prefab.
+            // On crÃ©Ã© un bouton a partir du prefab.
             GameObject btn = Instantiate(GateButtonPrefab, GateButtonParent);
 
-            // On récupère le texte dans le bouton.
+            // On rÃ©cupÃ¨re le texte dans le bouton.
             var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             // Si le texte existe, on affiche le nom de la gate.
             if (text != null) 
@@ -476,7 +476,7 @@ public class AirplaneUI : MonoBehaviour
             // On ajoute une action au clic du bouton.
             btn.GetComponent<Button>().onClick.AddListener(() =>
             {
-                // Quand ce bouton est cliqué, on assigne la gate cliqué.
+                // Quand ce bouton est cliquÃ©, on assigne la gate cliquÃ©.
                 SelectGate(capturedGate);
             });
         }
@@ -485,17 +485,17 @@ public class AirplaneUI : MonoBehaviour
     // Fonction qui reconstruit les boutons de gates si la liste est ouverte.
     public void RefreshGateButtonsIfOpen()
     {
-        // Si l'UI est fermée, il n'y a rien a mettre à jour.
+        // Si l'UI est fermÃ©e, il n'y a rien a mettre Ã  jour.
         if (!gameObject.activeInHierarchy) 
         {
             return;
         }
-        // Si aucun avion n'est selectionné, il n'y a rien a mettre à jour.
+        // Si aucun avion n'est selectionnÃ©, il n'y a rien a mettre Ã  jour.
         if (CurrentAirplane == null) 
         {
             return;
         }
-        // Si la selection est vérrouillée, on ne doit plus changer la liste.
+        // Si la selection est vÃ©rrouillÃ©e, on ne doit plus changer la liste.
         if (_gateSelectionLocked) 
         {
             return;
@@ -508,22 +508,22 @@ public class AirplaneUI : MonoBehaviour
 
         // On eeconstruit les boutons selon les gates maintenant disponibles.
         CreateGateButtons();
-        // On mémorise que les boutons sont créés.
+        // On mÃ©morise que les boutons sont crÃ©Ã©s.
         _gatesCreated = true;
     }
 
-    // Fonction appelé quand le joueur choisit une gate.
+    // Fonction appelÃ© quand le joueur choisit une gate.
     private void SelectGate(Transform gate)
     {
-        // On donne la gate à l'avion.
+        // On donne la gate Ã  l'avion.
         CurrentAirplane.AssignGate(gate);
 
-        // On vérrouille pour éviter de réassigner une deuxieme gate au même avion.
+        // On vÃ©rrouille pour Ã©viter de rÃ©assigner une deuxieme gate au mÃªme avion.
         _gateSelectionLocked = true;
 
-        // On cache la liste et on détruit les boutons.
+        // On cache la liste et on dÃ©truit les boutons.
         HideGateUI();
-        // On met à jour le Stop/Reprise, car l'avion roule vers une gate.
+        // On met Ã  jour le Stop/Reprise, car l'avion roule vers une gate.
         RefreshStopResumeUI();
     }
 
@@ -533,33 +533,33 @@ public class AirplaneUI : MonoBehaviour
         // On cache le scroll view.
         GateScrollView.SetActive(false);
 
-        // On détruit tous les boutons générés.
+        // On dÃ©truit tous les boutons gÃ©nÃ©rÃ©s.
         foreach (Transform child in GateButtonParent) 
         {
             Destroy(child.gameObject);
         }
             
 
-        // On indique que les boutons devront être recréés la prochaine fois.
+        // On indique que les boutons devront Ãªtre recrÃ©Ã©s la prochaine fois.
         _gatesCreated = false;
     }
 
-    // Fonction qui vérifie si le clic souris est dans cette UI.
+    // Fonction qui vÃ©rifie si le clic souris est dans cette UI.
     private bool IsClickInsideThisUI()
     {
         PointerEventData eventData = new PointerEventData(EventSystem.current);
-        // On donne au système UI la position actuelle de la souris.
+        // On donne au systÃ¨me UI la position actuelle de la souris.
         eventData.position = Mouse.current.position.ReadValue();
 
-        // On créé une liste qui recevra tous les éléments UI touchés par le raycast.
+        // On crÃ©Ã© une liste qui recevra tous les Ã©lÃ©ments UI touchÃ©s par le raycast.
         var results = new List<RaycastResult>();
-        // On demande quels éléments sont sous la souris.
+        // On demande quels Ã©lÃ©ments sont sous la souris.
         EventSystem.current.RaycastAll(eventData, results);
 
         // On parcourt tous les resultats du raycast UI.
         foreach (var r in results)
         {
-            // Si l'element touché est un enfant de cette UI, le clic est dedans.
+            // Si l'element touchÃ© est un enfant de cette UI, le clic est dedans.
             if (r.gameObject.transform.IsChildOf(transform)) 
             {
                 return true;
@@ -567,7 +567,7 @@ public class AirplaneUI : MonoBehaviour
                 
         }
 
-        // Sinon aucun élément de cette UI n'a été touché.
+        // Sinon aucun Ã©lÃ©ment de cette UI n'a Ã©tÃ© touchÃ©.
         return false;
     }
 }

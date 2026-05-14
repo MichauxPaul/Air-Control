@@ -2,14 +2,14 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Gestion des scènes
+/// Gestion des scÃ¨nes
 /// </summary>
 public class SceneSwitcher : MonoBehaviour
 {
     /// <summary>
-    /// permet de changer de scène dans l'application
+    /// permet de changer de scÃ¨ne dans l'application
     /// </summary>
-    /// <param name="sceneName">Nom d'une scène qui est présente dans la liste</param>
+    /// <param name="sceneName">Nom d'une scÃ¨ne qui est prÃ©sente dans la liste</param>
     public void SwitchScene (string sceneName)
     {
         SceneManager.LoadScene (sceneName);

@@ -4,90 +4,90 @@ using UnityEngine.InputSystem;
 public class CamFollowMouse : MonoBehaviour
 {
     [Header("Drag")]
-    // Vitesse a laquelle la caméra se déplace pendant le drag.
+    // Vitesse a laquelle la camÃ©ra se dÃ©place pendant le drag.
     public float DragSpeed = 1f;
 
     [Header("Zoom")]
     // Vitesse de zoom avec la molette.
     public float ZoomSpeed = 10f;
-    // Zoom minimum autorisé.
+    // Zoom minimum autorisÃ©.
     public float MinZoom = 5f;
-    // Zoom maximum autorisé.
+    // Zoom maximum autorisÃ©.
     public float MaxZoom = 20f;
 
     [Header("Limits")]
-    // Limites horizontales de la caméra.
+    // Limites horizontales de la camÃ©ra.
     public Vector2 LimitX = new Vector2(-50, 50);
-    // Limites verticales de la caméra.
+    // Limites verticales de la camÃ©ra.
     public Vector2 LimitY = new Vector2(-50, 50);
 
-    // Position du clic au début du drag.
+    // Position du clic au dÃ©but du drag.
     private Vector3 _dragOrigin;
-    // On indique si le joueur est en train de déplacer la caméra.
+    // On indique si le joueur est en train de dÃ©placer la camÃ©ra.
     private bool _isDragging;
 
-    // Référence vers la caméra principale.
+    // RÃ©fÃ©rence vers la camÃ©ra principale.
     private Camera _cam;
 
     private void Start()
     {
-        // On cherche la caméra marquée avec le tag MainCamera.
+        // On cherche la camÃ©ra marquÃ©e avec le tag MainCamera.
         _cam = Camera.main;
     }
 
     private void Update()
     {
-        // On gère le déplacement avec le clic droit.
+        // On gÃ¨re le dÃ©placement avec le clic droit.
         UpdateDrag();
-        // On gère le zoom avec la molette.
+        // On gÃ¨re le zoom avec la molette.
         UpdateZoom();
-        // On garde la caméra dans les limites.
+        // On garde la camÃ©ra dans les limites.
         ClampPosition();
     }
 
-    // Fonction qui gère le deplacement de la caméra.
+    // Fonction qui gÃ¨re le deplacement de la camÃ©ra.
     private void UpdateDrag()
     {
-        // Si le clic droit vient d'etre appuyé, on mémorise la position de départ.
+        // Si le clic droit vient d'etre appuyÃ©, on mÃ©morise la position de dÃ©part.
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
-            // On convertit une position écran en position monde avec ScreenToWorldPoint.
+            // On convertit une position Ã©cran en position monde avec ScreenToWorldPoint.
             _dragOrigin = _cam.ScreenToWorldPoint(GetMouseWorldPosition());
             // On indique que le drag est actif.
             _isDragging = true;
         }
 
-        // Si le clic droit vient d'être relaché, on arrête le drag.
+        // Si le clic droit vient d'Ãªtre relachÃ©, on arrÃªte le drag.
         if (Mouse.current.rightButton.wasReleasedThisFrame)
         {
-            // Le joueur ne déplace plus la caméra.
+            // Le joueur ne dÃ©place plus la camÃ©ra.
             _isDragging = false;
         }
 
-        // Si le joueur est en train de drag, on déplace la caméra.
+        // Si le joueur est en train de drag, on dÃ©place la camÃ©ra.
         if (_isDragging)
         {
             // Position actuelle de la souris dans le monde.
             Vector3 currentPos = _cam.ScreenToWorldPoint(GetMouseWorldPosition());
-            // Différence entre le point de depart et la position actuelle.
+            // DiffÃ©rence entre le point de depart et la position actuelle.
             Vector3 difference = _dragOrigin - currentPos;
-            // On applique cette différence à la position de la caméra.
+            // On applique cette diffÃ©rence Ã  la position de la camÃ©ra.
             transform.position += difference * DragSpeed;
         }
     }
 
-    // Fonction qui gère le zoom de la caméra.
+    // Fonction qui gÃ¨re le zoom de la camÃ©ra.
     private void UpdateZoom()
     {
         // On lit la valeur de la molette.
         float scroll = Mouse.current.scroll.ReadValue().y;
 
-        // Si la molette a bougé, on change le zoom.
+        // Si la molette a bougÃ©, on change le zoom.
         if (scroll != 0)
         {
             // On zoome avec orthographicSize.
             _cam.orthographicSize -= scroll * ZoomSpeed * Time.deltaTime;
-            // On empêche de dépasser les valeurs min et max avec Clamp .
+            // On empÃªche de dÃ©passer les valeurs min et max avec Clamp .
             _cam.orthographicSize = Mathf.Clamp(_cam.orthographicSize, MinZoom, MaxZoom);
         }
     }
@@ -95,18 +95,18 @@ public class CamFollowMouse : MonoBehaviour
     // Fonction qui convertit la position de la souris pour pouvoir l'utiliser dans le monde.
     private Vector3 GetMouseWorldPosition()
     {
-        // Position de la souris sur l'écran.
+        // Position de la souris sur l'Ã©cran.
         Vector3 mousePos = Mouse.current.position.ReadValue();
         // z correspond a la distance entre la camera et le plan du jeu.
         mousePos.z = Mathf.Abs(_cam.transform.position.z);
-        // On retourne une position écran complète pour ScreenToWorldPoint.
+        // On retourne une position Ã©cran complÃ¨te pour ScreenToWorldPoint.
         return mousePos;
     }
 
-    // Fonction qui bloque la caméra dans les limites configurées.
+    // Fonction qui bloque la camÃ©ra dans les limites configurÃ©es.
     private void ClampPosition()
     {
-        // On récupère la position actuelle.
+        // On rÃ©cupÃ¨re la position actuelle.
         Vector3 pos = transform.position;
 
         // On bloque x entre LimitX.x et LimitX.y avec Clamp.
@@ -114,7 +114,7 @@ public class CamFollowMouse : MonoBehaviour
         // On bloque y entre LimitY.x et LimitY.y avec Clamp .
         pos.y = Mathf.Clamp(pos.y, LimitY.x, LimitY.y);
 
-        // On applique la position corrigée.
+        // On applique la position corrigÃ©e.
         transform.position = pos;
     }
 }

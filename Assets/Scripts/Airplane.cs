@@ -11,9 +11,9 @@ public class Airplane : MonoBehaviour
     private static Transform _goAroundPoint;
 
     [Header("Vitesse d'approche")]
-    // Vitesse pendant l'arrivée.
+    // Vitesse pendant l'arrivÃ©e.
     public float InitialSpeed = 5f;
-    // Distance à partir de laquelle l'avion ralentit avant la fin de la piste.
+    // Distance Ã  partir de laquelle l'avion ralentit avant la fin de la piste.
     public float SlowRadius = 5f;
 
     [Header("Vitesse durant le Taxi")]
@@ -24,7 +24,7 @@ public class Airplane : MonoBehaviour
 
     [Header("Takeoff")]
     public float MaxTakeoffSpeed = 8f;
-    // Accélération appliquée jusqu'à la vitesse maximale.
+    // AccÃ©lÃ©ration appliquÃ©e jusqu'Ã  la vitesse maximale.
     public float TakeoffAcceleration = 1f;
 
     [Header("Gate")]
@@ -34,12 +34,12 @@ public class Airplane : MonoBehaviour
     public Color StartColor = Color.white;
 
     [Header("Audio")]
-    // Son joué quand on clique sur l'avion.
+    // Son jouÃ© quand on clique sur l'avion.
     public AudioClip ClickSound;
     // AudioSource qui joue le son.
     private AudioSource _audioSource;
 
-    // Enumère tous les états possibles de l'avion.
+    // EnumÃ¨re tous les Ã©tats possibles de l'avion.
     public enum AirplaneState
     {
         Approach,
@@ -65,12 +65,12 @@ public class Airplane : MonoBehaviour
 
     // Ici SpriteRenderer va nous servir a changer la couleur de l'avion.
     private SpriteRenderer _spriteRenderer;
-    // Référence vers l'UI
+    // RÃ©fÃ©rence vers l'UI
     private AirplaneUI _uiManager;
-    // Référence vers le gestionnaire des chemins.
+    // RÃ©fÃ©rence vers le gestionnaire des chemins.
     private TaxiwayManager _taxiwayManager;
 
-    // Chemin utilisé pour rouler au sol.
+    // Chemin utilisÃ© pour rouler au sol.
     private List<Transform> _taxiPath = new List<Transform>();
     // Index du prochain point dans le chemin de taxi.
     private int _taxiIndex = 0;
@@ -82,26 +82,26 @@ public class Airplane : MonoBehaviour
     // Point de sortie du pushback, on l'utilise pour trouver le bon chemin vers la piste.
     private Transform _pushbackExitPoint;
 
-    // Index du prochain point dans le chemin de décollage.
+    // Index du prochain point dans le chemin de dÃ©collage.
     private int _takeoffIndex = 0;
     // Vitesse courante pendant le decollage; elle augmente progressivement.
     private float _currentTakeoffSpeed;
-    // On récupère le chemin du décollage fourni par TaxiwayManager.
+    // On rÃ©cupÃ¨re le chemin du dÃ©collage fourni par TaxiwayManager.
     private List<Transform> _takeoffPath = new List<Transform>();
 
     // Timer utilise quand l'avion attend a la gate.
     private float _gateTimer;
-    // Délai aléatoire avant que l'avion demande le pushback.
+    // DÃ©lai alÃ©atoire avant que l'avion demande le pushback.
     private float _gateDelay;
 
-    // On mémorise l'état avant un stop pour savoir ou reprendre.
+    // On mÃ©morise l'Ã©tat avant un stop pour savoir ou reprendre.
     private AirplaneState _stateBeforeStop;
-    // On évite de donner plusieurs fois les points d'arrivée a la gate.
+    // On Ã©vite de donner plusieurs fois les points d'arrivÃ©e a la gate.
     private bool _gateArrivalScored;
-    // On évite de donner plusieurs fois les points de décollage.
+    // On Ã©vite de donner plusieurs fois les points de dÃ©collage.
     private bool _takeoffScored;
 
-    // Propriété publique pour savoir si l'avion est actuellement arrêté.
+    // PropriÃ©tÃ© publique pour savoir si l'avion est actuellement arrÃªtÃ©.
     public bool IsStopped() 
     {
         return State == AirplaneState.Stopped;
@@ -110,12 +110,12 @@ public class Airplane : MonoBehaviour
 
     private void Start()
     {
-        // On récupère le SpriteRenderer de l'avion.
+        // On rÃ©cupÃ¨re le SpriteRenderer de l'avion.
         _spriteRenderer = GetComponent<SpriteRenderer>();
-        // On récupère l'AudioSource de l'avion.
+        // On rÃ©cupÃ¨re l'AudioSource de l'avion.
         _audioSource = GetComponent<AudioSource>();
 
-        // Si l'avion a un sprite, on lui applique la couleur rouge de départ.
+        // Si l'avion a un sprite, on lui applique la couleur rouge de dÃ©part.
         if (_spriteRenderer != null)
         {
             _spriteRenderer.color = Color.red;
@@ -123,14 +123,14 @@ public class Airplane : MonoBehaviour
 
         // Cherche l'UI des avions
         _uiManager = FindFirstObjectByType<AirplaneUI>(FindObjectsInactive.Include);
-        // Cherche le gestionnaire des chemins dans la scène.
+        // Cherche le gestionnaire des chemins dans la scÃ¨ne.
         _taxiwayManager = FindFirstObjectByType<TaxiwayManager>();
 
-        // Si RunwayPoint n'est pas assigné, on essaie de le trouver par son nom.
+        // Si RunwayPoint n'est pas assignÃ©, on essaie de le trouver par son nom.
         if (RunwayPoint == null)
             RunwayPoint = GameObject.Find("RunwayPoint").transform;
 
-        // Si le point de go around n'est pas assigné on essaie de le trouver par son nom
+        // Si le point de go around n'est pas assignÃ© on essaie de le trouver par son nom
         if (_goAroundPoint == null)
         {
             _goAroundPoint = GameObject.Find("GoAroundPoint").transform;
@@ -140,14 +140,14 @@ public class Airplane : MonoBehaviour
 
     private void Update()
     {
-        // Gère les transitions d'état automatiquement.
+        // GÃ¨re les transitions d'Ã©tat automatiquement.
         UpdateStateTransitions();
-        // Gère l'attente a la gate.
+        // GÃ¨re l'attente a la gate.
         UpdateGateTimer();
-        // Met à jour la couleur selon l'état.
+        // Met Ã  jour la couleur selon l'Ã©tat.
         UpdateColor();
 
-        // On récupère la cible actuelle de l'avion.
+        // On rÃ©cupÃ¨re la cible actuelle de l'avion.
         Transform target = GetTarget();
         // Si aucune cible n'existe, on ne peut pas bouger.
         if (target == null) return;
@@ -158,7 +158,7 @@ public class Airplane : MonoBehaviour
         // Si la direction est assez grande, on oriente l'avion vers sa cible.
         if (dir.sqrMagnitude > 0.001f)
         {
-            // Atan2 calcule l'angle en radiant entre l'avion et sa cible. On la convertie ensuite en degrès
+            // Atan2 calcule l'angle en radiant entre l'avion et sa cible. On la convertie ensuite en degrÃ¨s
             float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
             // On applique une rotation pour bien orienter le sprite.
             transform.rotation = Quaternion.Euler(0, 0, angle - 90f);
@@ -170,40 +170,40 @@ public class Airplane : MonoBehaviour
         // Logique de mouvement du pushback.
         if (State == AirplaneState.Pushback)
         {
-            // Gère le recul de l'avion.
+            // GÃ¨re le recul de l'avion.
             MovePushback();
-            // On quitte la fonction pour éviter que le mouvement normal s'ajoute au pushback.
+            // On quitte la fonction pour Ã©viter que le mouvement normal s'ajoute au pushback.
             return;
         }
 
-        // Le decollage a aussi sa propre logique car il accelère progressivement.
+        // Le decollage a aussi sa propre logique car il accelÃ¨re progressivement.
         if (State == AirplaneState.TakingOff)
         {
-            // Gère l'accélération et le chemin de décollage.
+            // GÃ¨re l'accÃ©lÃ©ration et le chemin de dÃ©collage.
             MoveTakeoff();
             // On quitte pour ne pas utiliser le mouvement normal.
             return;
         }
 
-        // On calcule la vitesse selon l'état et la distance.
+        // On calcule la vitesse selon l'Ã©tat et la distance.
         float speed = GetSpeed(distance);
 
-        // Si l'état permet le mouvement, on avance vers la cible.
+        // Si l'Ã©tat permet le mouvement, on avance vers la cible.
         if (CanMove())
         {
-            // La fonction MoveTowards deplace l'avion sans dépasser la cible.
+            // La fonction MoveTowards deplace l'avion sans dÃ©passer la cible.
             transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
         }
 
-        // Gère le passage d'un point de taxi au suivant.
+        // GÃ¨re le passage d'un point de taxi au suivant.
         UpdateTaxiPath(distance);
-        // Gère l'arrivée sur la piste ou au go around.
+        // GÃ¨re l'arrivÃ©e sur la piste ou au go around.
         CheckRunwayArrival(distance);
-        // Gère le clic sur l'avion.
+        // GÃ¨re le clic sur l'avion.
         CheckClickSelection();
     }
 
-    // Gère les transitions entre les états.
+    // GÃ¨re les transitions entre les Ã©tats.
     private void UpdateStateTransitions()
     {
         // Si l'avion est en approche et entre dans le rayon de ralentissement.
@@ -214,10 +214,10 @@ public class Airplane : MonoBehaviour
         }
     }
 
-    // Retourne la vitesse adaptée a l'état actuel.
+    // Retourne la vitesse adaptÃ©e a l'Ã©tat actuel.
     private float GetSpeed(float distance)
     {
-        // Pendant l'approche, on ralentit progressivement près de la fin de piste.
+        // Pendant l'approche, on ralentit progressivement prÃ¨s de la fin de piste.
         if (State == AirplaneState.Approach || State == AirplaneState.SlowingApproach)
         {
             // on garde une valeur entre 0 et 1.
@@ -247,11 +247,11 @@ public class Airplane : MonoBehaviour
     // On dit si l'avion a le droit de bouger avec le mouvement standard.
     private bool CanMove()
     {
-        // On interdit le mouvement dans les états d'attente ou d'arrêt.
+        // On interdit le mouvement dans les Ã©tats d'attente ou d'arrÃªt.
         return State != AirplaneState.WaitingAtRunway && State != AirplaneState.Parked && State != AirplaneState.Stopped && State != AirplaneState.AtGate;
     }
 
-    // Gère l'arrivée a la piste et le go around.
+    // GÃ¨re l'arrivÃ©e a la piste et le go around.
     private void CheckRunwayArrival(float distance)
     {
         // Si l'avion arrive au RunwayPoint pendant l'approche.
@@ -269,10 +269,10 @@ public class Airplane : MonoBehaviour
         }
     }
 
-    // Gère le roulage sur les chemins au sol.
+    // GÃ¨re le roulage sur les chemins au sol.
     private void UpdateTaxiPath(float distance)
     {
-        // On traite seulement les deux états de roulage.
+        // On traite seulement les deux Ã©tats de roulage.
         if (State != AirplaneState.GoingToGate && State != AirplaneState.TaxiingToRunway) 
         {
             return;
@@ -290,7 +290,7 @@ public class Airplane : MonoBehaviour
             // On passe au point suivant.
             _taxiIndex++;
 
-            // Si on a depassé le dernier point du chemin.
+            // Si on a depassÃ© le dernier point du chemin.
             if (_taxiIndex >= _taxiPath.Count)
             {
                 // On vide le chemin courant.
@@ -302,7 +302,7 @@ public class Airplane : MonoBehaviour
                     StartGateWait();
                 }
 
-                // Si l'avion allait à la piste, il demande maintenant le decollage.
+                // Si l'avion allait Ã  la piste, il demande maintenant le decollage.
                 else if (State == AirplaneState.TaxiingToRunway) 
                 {
                     State = AirplaneState.TakeoffRequest;
@@ -319,20 +319,20 @@ public class Airplane : MonoBehaviour
         State = AirplaneState.AtGate;
         // Remet le timer a zero.
         _gateTimer = 0f;
-        // Délai aléatoire avant la demande de pushback (entre 30 seconde et 1 minute).
+        // DÃ©lai alÃ©atoire avant la demande de pushback (entre 30 seconde et 1 minute).
         _gateDelay = Random.Range(30f, 60f);
 
-        // Si les points de score de gate n'ont pas encore été donnés.
+        // Si les points de score de gate n'ont pas encore Ã©tÃ© donnÃ©s.
         if (!_gateArrivalScored)
         {
             // On ajoute les points dans le GameManager.
             GameManager.Instance.AddGateArrivalPoints();
-            // On mémorise que les points ont été donnés.
+            // On mÃ©morise que les points ont Ã©tÃ© donnÃ©s.
             _gateArrivalScored = true;
         }
     }
 
-    // G*ère le timer d'attente a la gate.
+    // G*Ã¨re le timer d'attente a la gate.
     private void UpdateGateTimer()
     {
         // Si l'avion n'attend pas a la gate, on quitte.
@@ -341,7 +341,7 @@ public class Airplane : MonoBehaviour
             return;
         } 
 
-        // On ajoute le temps écoule depuis la dernière frame.
+        // On ajoute le temps Ã©coule depuis la derniÃ¨re frame.
         _gateTimer += Time.deltaTime;
 
         // Quand le timer atteint le delai.
@@ -353,10 +353,10 @@ public class Airplane : MonoBehaviour
             
     }
 
-    // On définit le chemin de pushback.
+    // On dÃ©finit le chemin de pushback.
     public void SetPushbackPath(List<Transform> path)
     {
-        // Si path existe, on l'utilise; sinon on créé une liste vide.
+        // Si path existe, on l'utilise; sinon on crÃ©Ã© une liste vide.
         if (path != null)
         {
             _pushbackPath = new List<Transform>(path);
@@ -370,27 +370,27 @@ public class Airplane : MonoBehaviour
         _pushbackIndex = 0;
     }
 
-    // Fonction pour lancer le pushback après autorisation.
+    // Fonction pour lancer le pushback aprÃ¨s autorisation.
     public void StartPushback()
     {
-        // La porte est liberée dès le depart du pushback.
+        // La porte est liberÃ©e dÃ¨s le depart du pushback.
         AssignedGate = null;
-        // Si la liste des portes est ouverte, elle est mise à jour.
+        // Si la liste des portes est ouverte, elle est mise Ã  jour.
         _uiManager.RefreshGateButtonsIfOpen();
 
-        // Passe en état pushback.
+        // Passe en Ã©tat pushback.
         State = AirplaneState.Pushback;
         // Recommence au premier point de pushback.
         _pushbackIndex = 0;
     }
 
-    // Fonction pour déplacer l'avion sur son chemin de pushback.
+    // Fonction pour dÃ©placer l'avion sur son chemin de pushback.
     private void MovePushback()
     {
-        // Si aucun chemin n'est configuré.
+        // Si aucun chemin n'est configurÃ©.
         if (_pushbackPath.Count == 0)
         {
-            // On met l'avion dans un état pour éviter un blocage.
+            // On met l'avion dans un Ã©tat pour Ã©viter un blocage.
             State = AirplaneState.Parked;
             // On quitte la fonction.
             return;
@@ -418,7 +418,7 @@ public class Airplane : MonoBehaviour
         }
     }
 
-    // Fonction pour géré le clic sur l'avion et jouer un son en même temps.
+    // Fonction pour gÃ©rÃ© le clic sur l'avion et jouer un son en mÃªme temps.
     private void CheckClickSelection()
     {
         // Quand l'avion est a la gate, on ne veut pas ouvrir son UI.
@@ -427,12 +427,12 @@ public class Airplane : MonoBehaviour
             return;
         }
 
-        // Si le clic gauche vient d'être préssé.
+        // Si le clic gauche vient d'Ãªtre prÃ©ssÃ©.
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             // On convertit la position souris en position monde.
             Vector2 mousePos = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
-            // On lance un Raycast pour vérifié sur quel collider est la souris.
+            // On lance un Raycast pour vÃ©rifiÃ© sur quel collider est la souris.
             RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
 
             // Si le raycast touche cet avion.
@@ -450,7 +450,7 @@ public class Airplane : MonoBehaviour
         }
     }
 
-    // Fonction qui retourne la cible actuelle selon l'état.
+    // Fonction qui retourne la cible actuelle selon l'Ã©tat.
     private Transform GetTarget()
     {
         // Pendant le pushback, la cible est le point de pushback courant.
@@ -460,7 +460,7 @@ public class Airplane : MonoBehaviour
         }
 
 
-        // Pendant le décollage, la cible est le point de décollage courant.
+        // Pendant le dÃ©collage, la cible est le point de dÃ©collage courant.
         if (State == AirplaneState.TakingOff && _takeoffPath.Count > 0) 
         {
             return _takeoffPath[_takeoffIndex];
@@ -495,27 +495,27 @@ public class Airplane : MonoBehaviour
     // Fonction pour assigner une gate a l'avion.
     public void AssignGate(Transform gate)
     {
-        // On mémorise la gate choisie.
+        // On mÃ©morise la gate choisie.
         AssignedGate = gate;
-        // L'avion commence à rouler vers cette gate.
+        // L'avion commence Ã  rouler vers cette gate.
         State = AirplaneState.GoingToGate;
 
-        // Génère le chemin vers la gate.
+        // GÃ©nÃ¨re le chemin vers la gate.
         GeneratePath(gate);
 
-        // On récupère le chemin de pushback configuré sur cette gate.
+        // On rÃ©cupÃ¨re le chemin de pushback configurÃ© sur cette gate.
         var pushback = gate.GetComponent<GatePushbackPath>();
         // Si la gate a un script de pushback.
         if (pushback != null)
         {
-            // On assigne les points de pushback à l'avion.
+            // On assigne les points de pushback Ã  l'avion.
             SetPushbackPath(pushback.PushbackPoints);
-            // On mémorise la sortie de pushback pour le futur chemin vers la piste.
+            // On mÃ©morise la sortie de pushback pour le futur chemin vers la piste.
             _pushbackExitPoint = pushback.PushbackExitPoint;
         }
     }
 
-    // Fonction qui génère le chemin vers une gate.
+    // Fonction qui gÃ©nÃ¨re le chemin vers une gate.
     private void GeneratePath(Transform gate)
     {
         // On vide l'ancien chemin.
@@ -537,7 +537,7 @@ public class Airplane : MonoBehaviour
         _taxiIndex = 0;
     }
 
-    // Fonction pour générer le chemin depuis la sortie de pushback vers le point d'arrêt.
+    // Fonction pour gÃ©nÃ©rer le chemin depuis la sortie de pushback vers le point d'arrÃªt.
     private void GenerateRunwayPath()
     {
         // On vide l'ancien chemin.
@@ -566,26 +566,26 @@ public class Airplane : MonoBehaviour
     // Fonction pour lancer le roulage vers la piste.
     private void StartTaxiToRunway()
     {
-        // On Créé le chemin vers la piste.
+        // On CrÃ©Ã© le chemin vers la piste.
         GenerateRunwayPath();
 
         // Si aucun chemin n'a ete trouve.
         if (_taxiPath.Count == 0)
         {
-            // On place l'avion en état Parked pour eviter qu'il reste bloqué.
+            // On place l'avion en Ã©tat Parked pour eviter qu'il reste bloquÃ©.
             State = AirplaneState.Parked;
             // On quitte la fonction.
             return;
         }
 
-        // L'avion roule vers le point d'arrêt.
+        // L'avion roule vers le point d'arrÃªt.
         State = AirplaneState.TaxiingToRunway;
     }
 
     // Fonction qui autorise le roulage vers la piste.
     public void AllowTaxiToRunway()
     {
-        // On n'autorise cette action que si l'avion la demandé.
+        // On n'autorise cette action que si l'avion la demandÃ©.
         if (State != AirplaneState.TaxiRequest) 
         {
             return;
@@ -595,53 +595,53 @@ public class Airplane : MonoBehaviour
         StartTaxiToRunway();
     }
 
-    // Fonction qui autorise le décollage.
+    // Fonction qui autorise le dÃ©collage.
     public void AllowTakeoff()
     {
-        // On n'autorise cette action que si l'avion attend le décollage.
+        // On n'autorise cette action que si l'avion attend le dÃ©collage.
         if (State != AirplaneState.TakeoffRequest) 
         {
             return;
         } 
 
-        // On repart au premier point de décollage.
+        // On repart au premier point de dÃ©collage.
         _takeoffIndex = 0;
-        // On remet la vitesse de décollage à zéro pour accélérer progressivement.
+        // On remet la vitesse de dÃ©collage Ã  zÃ©ro pour accÃ©lÃ©rer progressivement.
         _currentTakeoffSpeed = 0f;
-        // On récupère le chemin de décollage
+        // On rÃ©cupÃ¨re le chemin de dÃ©collage
         _takeoffPath = _taxiwayManager.GetTakeoffPath();
 
-        // Si aucun chemin de decollage n'est configuré.
+        // Si aucun chemin de decollage n'est configurÃ©.
         if (_takeoffPath.Count == 0)
         {
-            // On considère que le décollage est terminé.
+            // On considÃ¨re que le dÃ©collage est terminÃ©.
             State = AirplaneState.TakeoffComplete;
-            // On donne quand même les points de decollage.
+            // On donne quand mÃªme les points de decollage.
             ScoreTakeoff();
             // On quitte la fonction.
             return;
         }
 
-        // L'avion commence son décollage.
+        // L'avion commence son dÃ©collage.
         State = AirplaneState.TakingOff;
     }
 
-    // Fonction qui gère le mouvement de décollage avec l'accélération.
+    // Fonction qui gÃ¨re le mouvement de dÃ©collage avec l'accÃ©lÃ©ration.
     private void MoveTakeoff()
     {
         // Si aucun chemin n'existe, on termine.
         if (_takeoffPath.Count == 0)
         {
-            // Etat final du décollage.
+            // Etat final du dÃ©collage.
             State = AirplaneState.TakeoffComplete;
             // On quitte la fonction.
             return;
         }
 
-        // Point de décollage courant.
+        // Point de dÃ©collage courant.
         Transform target = _takeoffPath[_takeoffIndex];
 
-        // On accélère progressivement jusqu'a MaxTakeoffSpeed.
+        // On accÃ©lÃ¨re progressivement jusqu'a MaxTakeoffSpeed.
         _currentTakeoffSpeed = Mathf.MoveTowards(_currentTakeoffSpeed, MaxTakeoffSpeed, TakeoffAcceleration * Time.deltaTime);
 
         // On avance vers le point courant avec la vitesse actuelle.
@@ -656,22 +656,22 @@ public class Airplane : MonoBehaviour
             // Si le dernier point est atteint.
             if (_takeoffIndex >= _takeoffPath.Count)
             {
-                // On passe en état de décollage terminé.
+                // On passe en Ã©tat de dÃ©collage terminÃ©.
                 State = AirplaneState.TakeoffComplete;
-                // On garde l'index sur le dernier point validé.
+                // On garde l'index sur le dernier point validÃ©.
                 _takeoffIndex = _takeoffPath.Count - 1;
-                // On donne les points du décollage.
+                // On donne les points du dÃ©collage.
                 ScoreTakeoff();
-                // On détruit l'avion pour éviter des problèmes
+                // On dÃ©truit l'avion pour Ã©viter des problÃ¨mes
                 Destroy(gameObject);
             }
         }
     }
 
-    // Fonction qui donne les points de décollage
+    // Fonction qui donne les points de dÃ©collage
     private void ScoreTakeoff()
     {
-        // Si les points ont deja été donnés, on évite de les redonner.
+        // Si les points ont deja Ã©tÃ© donnÃ©s, on Ã©vite de les redonner.
         if (_takeoffScored) 
         {
             return;
@@ -680,11 +680,11 @@ public class Airplane : MonoBehaviour
 
         // On ajoute les points dans le GameManager.
         GameManager.Instance.AddTakeoffPoints();
-        // On mémorise que les points ont été donnés.
+        // On mÃ©morise que les points ont Ã©tÃ© donnÃ©s.
         _takeoffScored = true;
     }
 
-    // Fonction pour autorisé l'atterrissage.
+    // Fonction pour autorisÃ© l'atterrissage.
     public void AllowLanding() 
     {
         State = AirplaneState.Cleared;
@@ -699,23 +699,23 @@ public class Airplane : MonoBehaviour
     // FOnction qui stoppe le roulage si possible.
     public void StopMovement()
     {
-        // Si l'avion n'est pas dans un état stoppable, on ne fait rien.
+        // Si l'avion n'est pas dans un Ã©tat stoppable, on ne fait rien.
         if (!CanStopMovement()) 
         {
             return;
         }
         
 
-        // On mémorise l'état actuel pour reprendre le bon roulage.
+        // On mÃ©morise l'Ã©tat actuel pour reprendre le bon roulage.
         _stateBeforeStop = State;
-        // On passe en état stoppe.
+        // On passe en Ã©tat stoppe.
         State = AirplaneState.Stopped;
     }
 
-    // Fonction qui reprend le roulage après un stop.
+    // Fonction qui reprend le roulage aprÃ¨s un stop.
     public void ResumeMovement()
     {
-        // Si l'avion était en roulage vers une gate ou la piste, on reprend cet état.
+        // Si l'avion Ã©tait en roulage vers une gate ou la piste, on reprend cet Ã©tat.
         if (_stateBeforeStop == AirplaneState.GoingToGate || _stateBeforeStop == AirplaneState.TaxiingToRunway)
         {
             State = _stateBeforeStop;
@@ -741,7 +741,7 @@ public class Airplane : MonoBehaviour
         return Vector3.Distance(transform.position, RunwayPoint.position) < SlowRadius;
     }
 
-    // Fonction qui indique si l'avion est considéré comme étant a la porte.
+    // Fonction qui indique si l'avion est considÃ©rÃ© comme Ã©tant a la porte.
     private bool IsAtGate()
     {
         // Ces etats ne doivent pas causer de game over en cas de contact.
@@ -752,20 +752,20 @@ public class Airplane : MonoBehaviour
     {
         // GetComponentInParent marche meme si le collider est sur un enfant de l'avion.
         Airplane other = collision.gameObject.GetComponentInParent<Airplane>();
-        // On gère la collision avec l'autre avion trouvé.
+        // On gÃ¨re la collision avec l'autre avion trouvÃ©.
         CheckAirplaneCollision(other);
     }
 
     // Collision 2D avec un collider configure en trigger.
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // On récupère l'avion sur l'objet touche ou son parent.
+        // On rÃ©cupÃ¨re l'avion sur l'objet touche ou son parent.
         Airplane otherAirplane = other.GetComponentInParent<Airplane>();
-        // On gère la collision avec l'autre avion trouvé.
+        // On gÃ¨re la collision avec l'autre avion trouvÃ©.
         CheckAirplaneCollision(otherAirplane);
     }
 
-    // Fonction qui décide si une collision entre deux avions cause un game over.
+    // Fonction qui dÃ©cide si une collision entre deux avions cause un game over.
     private void CheckAirplaneCollision(Airplane other)
     {
         // Si l'autre objet n'est pas un avion, on l'ignore.
@@ -789,7 +789,7 @@ public class Airplane : MonoBehaviour
         GameManager.Instance.GameOver();
     }
 
-    // Fonction qui met à jour la couleur de l'avion selon son état.
+    // Fonction qui met Ã  jour la couleur de l'avion selon son Ã©tat.
     private void UpdateColor()
     {
         // Si aucun SpriteRenderer n'existe, impossible de changer la couleur.
@@ -808,7 +808,7 @@ public class Airplane : MonoBehaviour
             // On applique le rouge.
             col = Color.red;
         }
-        // Vert signifie que l'avion est autorisé et en train de suivre une action.
+        // Vert signifie que l'avion est autorisÃ© et en train de suivre une action.
         else if (State == AirplaneState.Cleared || State == AirplaneState.GoingToGate || State == AirplaneState.TaxiingToRunway || State == AirplaneState.Pushback || State == AirplaneState.TakingOff || State == AirplaneState.TakeoffComplete || State == AirplaneState.GoAround)
         {
             // On applique le vert.

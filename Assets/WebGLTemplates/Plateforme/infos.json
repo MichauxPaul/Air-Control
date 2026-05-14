@@ -1,0 +1,12 @@
+{
+    "author": "Jean-Michel Simard",
+    "website": "https://tim.cgmatane.qc.ca/",
+    "year": "2021",
+    "title": "Test avec Unity WebGL",
+    "description": "Test d'intégration d'une application WebGL faite avec Unity",
+    "displayTitle": true,
+    "img": "tile.png",
+    "desktopOnly": true,
+    "width": 960,
+    "height": 600
+}
