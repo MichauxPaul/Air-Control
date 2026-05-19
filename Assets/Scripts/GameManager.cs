@@ -24,6 +24,11 @@ public class GameManager : MonoBehaviour
     public GameObject GameOverPanel;
     // Texte dans le panel de game over pour afficher le Score final.
     public TextMeshProUGUI GameOverScoreText;
+    // Bouton pour envoyer le score a la Plateforme (visible seulement en GameOver).
+    public GameObject SendHighscoreButton;
+    // Bouton "Recommencer" dans le panel de GameOver.
+    public GameObject RestartButton;
+    private Button _restartButtonComponent;
 
     [Header("Audio")]
     // Ambience sonore du jeu pendant la partie
@@ -35,6 +40,16 @@ public class GameManager : MonoBehaviour
 
     // on empêche de déclencher plusieurs game over en même temps.
     private bool _isGameOver;
+    // On évite d'envoyer plusieurs fois le même score.
+    private bool _scoreSent;
+    // On évite d'appeler InitApp/InitGame plusieurs fois (GameManager persiste entre les scènes).
+    private bool _platformInitialized;
+    // Utilisé pour démarrer l'audio rapidement après un clic sur "Jouer".
+    private bool _startBkgAudio;
+    // Empêche de compter deux fois la même partie.
+    private bool _gameSessionAlreadyCounted;
+    // On cache le composant Button pour brancher le OnClick même si le GameManager persiste entre les scenes.
+    private Button _sendHighscoreButtonComponent;
 
 
     private void Awake()
@@ -62,15 +77,6 @@ public class GameManager : MonoBehaviour
         // On remet le temps normal au cas ou on revient d'un game over.
         Time.timeScale = 1f;
 
-        // Début d'une partie pour la Plateforme.
-        if (Application.platform == RuntimePlatform.WebGLPlayer)
-        {
-            // On indique à la Plateforme qu'une partie commence.
-            PlateformeClient.InitGame();
-            // On applique immédiatement l'état "muet" courant de la Plateforme a tous les sons Unity.
-            ApplyMuteState(PlateformeClient.SoundMuteState);
-        }
-
         // Au demarrage, on s'assure que le panel est caché.
         ResetRoundState();
 
@@ -78,11 +84,13 @@ public class GameManager : MonoBehaviour
         RefreshScore();
     }
 
-    // Reinitialise les variables d'une nouvelle partie (utile quand on arrive dans la scene Game).
+    // Fonction pour réinitialiser les variables lors d'une nouvelle partie .
     private void ResetRoundState()
     {
         // On autorise a nouveau un "GameOver".
         _isGameOver = false;
+        // A chaque nouvelle partie, on autorise a nouveau l'envoi du score.
+        _scoreSent = false;
         // On remet le temps normal.
         Time.timeScale = 1f;
         // On remet le score à zero au début d'une nouvelle partie.
@@ -93,12 +101,97 @@ public class GameManager : MonoBehaviour
         {
             GameOverPanel.SetActive(false); 
         }
+
+        // Par defaut, le bouton d'envoi du score n'est pas visible hors GameOver.
+        if (SendHighscoreButton != null)
+        {
+            SendHighscoreButton.SetActive(false);
+        }
+
+        // Par defaut, le bouton recommencer n'est pas visible hors GameOver.
+        if (RestartButton != null)
+        {
+            RestartButton.SetActive(false);
+        }
     }
 
     // Fonction pour retrouver les références UI dans la scène courante.
     private void BindSceneUIReferences()
     {
         // On tente donc de retrouver les références dans la scène courante si elles sont null.
+        if (ScoreText == null)
+        {
+            GameObject scoreGo = GameObject.Find("AffichageScore");
+            if (scoreGo != null)
+            {
+                ScoreText = scoreGo.GetComponent<TextMeshProUGUI>();
+                if (ScoreText == null)
+                {
+                    ScoreText = scoreGo.GetComponentInChildren<TextMeshProUGUI>(true);
+                }
+            }
+        }
+
+        // Score dans le panel de GameOver
+        if (GameOverScoreText == null)
+        {
+            GameObject gameOverScoreGo = GameObject.Find("TextScore");
+            if (gameOverScoreGo != null)
+            {
+                GameOverScoreText = gameOverScoreGo.GetComponent<TextMeshProUGUI>();
+                if (GameOverScoreText == null)
+                {
+                    GameOverScoreText = gameOverScoreGo.GetComponentInChildren<TextMeshProUGUI>(true);
+                }
+            }
+        }
+
+        // Audio d'ambiance
+        if (BackgroundAudio == null)
+        {
+            GameObject ambienceGo = GameObject.Find("SoundAmbiance");
+            if (ambienceGo != null)
+            {
+                BackgroundAudio = ambienceGo.GetComponent<AudioSource>();
+                if (BackgroundAudio == null)
+                {
+                    BackgroundAudio = ambienceGo.GetComponentInChildren<AudioSource>(true);
+                }
+            }
+        }
+
+        // Audio de SFX
+        if (SFXSource == null)
+        {
+            GameObject sfxGo = GameObject.Find("SFX");
+            if (sfxGo != null)
+            {
+                SFXSource = sfxGo.GetComponent<AudioSource>();
+                if (SFXSource == null)
+                {
+                    SFXSource = sfxGo.GetComponentInChildren<AudioSource>(true);
+                }
+            }
+        }
+
+        // AudioClip de collision 
+        if (CollisionSound == null)
+        {
+            GameObject crashGo = GameObject.Find("crash");
+            if (crashGo != null)
+            {
+                AudioSource crashAudioSource = crashGo.GetComponent<AudioSource>();
+                if (crashAudioSource == null)
+                {
+                    crashAudioSource = crashGo.GetComponentInChildren<AudioSource>(true);
+                }
+
+                if (crashAudioSource != null && crashAudioSource.clip != null)
+                {
+                    CollisionSound = crashAudioSource.clip;
+                }
+            }
+        }
 
         if (ScoreText == null)
         {
@@ -168,6 +261,116 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        // Une fois le panel trouvé, on essaie de retrouver et brancher le bouton d'envoi du score.
+        TryBindSendHighscoreButton();
+        TryBindRestartButton();
+    }
+
+    // Cherche un enfant par nom dans toute la hiérarchie (récursif).
+    private static Transform FindDeepChild(Transform parent, string childName)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child == null)
+            {
+                continue;
+            }
+
+            if (child.name == childName)
+            {
+                return child;
+            }
+
+            Transform found = FindDeepChild(child, childName);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private void TryBindSendHighscoreButton()
+    {
+        // Si on n'a pas de panel de GameOver, on ne peut pas chercher le bouton.
+        if (GameOverPanel == null)
+        {
+            return;
+        }
+
+        // On cherche EXACTEMENT le composant Button dont le GameObject s'appelle "BtnSubmitScore".
+        // Important: éviter GetComponentInParent/GetComponentInChildren car ça peut binder un autre bouton
+        // (ex: Quit/Close) et fermer le jeu au clic.
+        Button[] buttons = GameOverPanel.GetComponentsInChildren<Button>(true);
+        _sendHighscoreButtonComponent = null;
+        SendHighscoreButton = null;
+        foreach (Button button in buttons)
+        {
+            if (button == null)
+            {
+                continue;
+            }
+
+            if (button.gameObject.name == "BtnSubmitScore")
+            {
+                _sendHighscoreButtonComponent = button;
+                SendHighscoreButton = button.gameObject;
+                break;
+            }
+        }
+
+        // Si on a trouvé le Button, on branche l'événement OnClick.
+        if (_sendHighscoreButtonComponent != null)
+        {
+            // Ce bouton sert uniquement à soumettre le score: on remplace les actions existantes
+            // pour éviter qu'un ancien OnClick (ex: Quit/Close/Restart) ferme le jeu.
+            // IMPORTANT: RemoveAllListeners ne retire pas toujours les "Persistent Calls" configurés dans l'Inspector.
+            // On remplace donc complètement l'événement onClick.
+            _sendHighscoreButtonComponent.onClick = new Button.ButtonClickedEvent();
+            _sendHighscoreButtonComponent.onClick.AddListener(sendHightScore);
+        }
+    }
+
+    private void TryBindRestartButton()
+    {
+        if (GameOverPanel == null)
+        {
+            return;
+        }
+
+        // On cherche EXACTEMENT le composant Button dont le GameObject s'appelle "RecommencerBtn".
+        Button[] buttons = GameOverPanel.GetComponentsInChildren<Button>(true);
+        _restartButtonComponent = null;
+        RestartButton = null;
+        foreach (Button button in buttons)
+        {
+            if (button == null)
+            {
+                continue;
+            }
+
+            if (button.gameObject.name == "RecommencerBtn")
+            {
+                _restartButtonComponent = button;
+                RestartButton = button.gameObject;
+                break;
+            }
+        }
+
+        if (_restartButtonComponent != null)
+        {
+            // Ce bouton sert uniquement à recommencer: on remplace les actions existantes.
+            _restartButtonComponent.onClick = new Button.ButtonClickedEvent();
+            _restartButtonComponent.onClick.AddListener(RestartGame);
+        }
     }
 
     // Fonction qui retourne les GameObjects racines de la scène active.
@@ -208,10 +411,17 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (_platformInitialized)
+        {
+            return;
+        }
+
         // On dit à la Plateforme qu'elle peut lancer l'application correctement.
         PlateformeClient.InitApp(); 
         // On applique le mute au moment où la Plateforme confirme le chargement.
         ApplyMuteState(PlateformeClient.SoundMuteState); 
+
+        _platformInitialized = true;
     }
 
     private void OnPlatformSoundChanged(bool muteState)
@@ -242,6 +452,46 @@ public class GameManager : MonoBehaviour
         BindSceneUIReferences();
         ResetRoundState();
         RefreshScore();
+
+        // Quand on arrive dans la scène de jeu, on indique à la Plateforme qu'une partie commence.
+        if (Application.platform == RuntimePlatform.WebGLPlayer && _platformInitialized && scene.name == "Game")
+        {
+            if (!_gameSessionAlreadyCounted)
+            {
+                PlateformeClient.InitGame();
+                _gameSessionAlreadyCounted = true;
+            }
+
+            // On tente de démarrer l'ambiance le plus tôt possible.
+            if (BackgroundAudio != null && !BackgroundAudio.isPlaying)
+            {
+                BackgroundAudio.Play();
+            }
+
+            _startBkgAudio = false;
+        }
+        else
+        {
+            // En dehors de la scène Game, on reset pour que la prochaine partie soit comptée.
+            _gameSessionAlreadyCounted = false;
+        }
+    }
+
+    public void PlayGame()
+    {
+        if (Application.platform != RuntimePlatform.WebGLPlayer)
+        {
+            return;
+        }
+
+        if (!_platformInitialized)
+        {
+            return;
+        }
+
+        PlateformeClient.InitGame();
+        _gameSessionAlreadyCounted = true;
+        _startBkgAudio = true;
     }
 
     // On ajoute les points prévus pour l'arrivée a une porte.
@@ -299,21 +549,6 @@ public class GameManager : MonoBehaviour
         // Time.timeScale a 0 met le jeu en pause 
         Time.timeScale = 0f;
 
-        // On sauvegarde le highscore via la Plateforme.
-        if (Application.platform == RuntimePlatform.WebGLPlayer)
-        {
-            int highscore;
-            if (Score > int.MaxValue)
-            {
-                highscore = int.MaxValue;
-            }
-            else
-            {
-                highscore = (int)Score;
-            }
-            PlateformeClient.SaveHighscore(highscore);
-        }
-
         // On joue le son de collision.
         if (SFXSource != null && CollisionSound != null)
         {
@@ -335,6 +570,18 @@ public class GameManager : MonoBehaviour
             GameOverPanel.SetActive(true);
         }
 
+        // Le bouton d'envoi du score n'est visible que dans le panel de GameOver.
+        if (SendHighscoreButton != null)
+        {
+            // On l'affiche seulement à la mort (pas pendant la partie).
+            SendHighscoreButton.SetActive(true);
+        }
+
+        // Le bouton "Recommencer" doit aussi être visible dans le panel de GameOver.
+        if (RestartButton != null)
+        {
+            RestartButton.SetActive(true);
+        }
 
         // Si le texte final est assigné, on affiche le Score final dedans.
         if (GameOverScoreText != null)
@@ -344,18 +591,53 @@ public class GameManager : MonoBehaviour
 
     }
 
-    // Fonction pour recommencer le jeu.
-    public void RestartGame()
+    // Fonction appelé par le bouton d'envoie du score dans le panel de GameOver pour envoyer le score a la Plateforme.
+    public void sendHightScore()
     {
         if (Application.platform == RuntimePlatform.WebGLPlayer)
         {
-            PlateformeClient.Restart();
-            return;
-        }
+            // La Plateforme doit être initialisée avant de pouvoir ouvrir la fenêtre de score.
+            if (!_platformInitialized)
+            {
+                return;
+            }
 
+            // Si on a déjà envoyé notre score alors on ne renvoie pas une deuxième fois.
+            if (_scoreSent)
+            {
+                return;
+            }
+
+            int scoreToSend;
+            if (Score > int.MaxValue)
+            {
+                scoreToSend = int.MaxValue;
+            }
+            else if (Score < 0)
+            {
+                scoreToSend = 0;
+            }
+            else
+            {
+                scoreToSend = (int)Score;
+            }
+
+            _scoreSent = true;
+            PlateformeClient.SaveHighscore(scoreToSend);
+        }    
+    }
+
+    // Fonction pour recommencer le jeu.
+    public void RestartGame()
+    {
         // On remet le temps normal avant de recharger la scène.
         Time.timeScale = 1f;
-        // On recharge la scène actuelle avec son index dans les Build Settings.
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+
+        // On autorise à la Plateforme de compter une nouvelle partie après le reload.
+        _gameSessionAlreadyCounted = false;
+
+        // Sur WebGL, PlateformeClient.Restart() relance toute l'application sur la Plateforme.
+        // Ici on veut juste recharger la scène "Game".
+        SceneManager.LoadScene("Game");
     }
 }
